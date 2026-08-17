@@ -1,4 +1,4 @@
-# netv application image
+# tolochatv application image
 #
 # Default build uses pre-built FFmpeg with full hardware support:
 #   docker compose build
@@ -12,14 +12,16 @@
 # - QSV/VPL (Intel QuickSync)
 # - All major codecs (x264, x265, VP9, AV1, etc.)
 
-ARG FFMPEG_IMAGE=ghcr.io/jvdillon/netv-ffmpeg:latest
+# TODO: Replace with your own published image once available:
+#   FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
+ARG FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
 FROM ${FFMPEG_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies
 # - If using apt ffmpeg (ubuntu base): install ffmpeg + python
-# - If using compiled ffmpeg (netv-ffmpeg base): ffmpeg already present, just install python
+# - If using compiled ffmpeg (tolochatv-ffmpeg base): ffmpeg already present, just install python
 # Note: The conditional must be evaluated in shell, not in Dockerfile syntax
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -58,12 +60,12 @@ RUN if python3 -m pip install --help 2>&1 | grep -q -- '--break-system-packages'
 EXPOSE 8000
 
 # Environment variables (see README for details)
-ENV NETV_PORT=8000
-ENV NETV_HTTPS=""
+ENV TOLOCHATV_PORT=8000
+ENV TOLOCHATV_HTTPS=""
 ENV LOG_LEVEL=INFO
 
 # Create non-root user (entrypoint handles permissions and group membership)
-RUN useradd -m netv
+RUN useradd -m tolochatv
 
 # Copy entrypoint and set permissions with validation
 COPY entrypoint.sh /app/

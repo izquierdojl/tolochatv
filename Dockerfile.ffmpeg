@@ -129,7 +129,7 @@ ARG BUILD_LIBJXL=1
 ARG BUILD_LIBX264=1
 
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
-LABEL org.opencontainers.image.title="netv-ffmpeg"
+LABEL org.opencontainers.image.title="tolochatv-ffmpeg"
 LABEL org.opencontainers.image.description="FFmpeg with NVENC, VAAPI, QSV, AMF hardware acceleration"
 LABEL org.opencontainers.image.version="${FFMPEG_VERSION}"
 

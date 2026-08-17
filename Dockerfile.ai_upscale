@@ -1,4 +1,4 @@
-# netv with AI Upscale (TensorRT super-resolution)
+# tolochatv with AI Upscale (TensorRT super-resolution)
 #
 # This image includes everything needed for AI upscaling:
 # - FFmpeg with TensorRT DNN backend
@@ -11,15 +11,17 @@
 #   - nvidia-container-toolkit installed on host
 #
 # Build:
-#   docker build -f Dockerfile.ai_upscale -t netv-ai-upscale .
+#   docker build -f Dockerfile.ai_upscale -t tolochatv-ai-upscale .
 #
 # Run (engines are cached in volume):
-#   docker run --gpus all -v netv-models:/models -p 8000:8000 netv-ai-upscale
+#   docker run --gpus all -v tolochatv-models:/models -p 8000:8000 tolochatv-ai-upscale
 #
 # Note: First start takes ~2-3 minutes to build TensorRT engines for your GPU.
 # Subsequent starts are instant (engines cached in /models volume).
 
-ARG FFMPEG_IMAGE=ghcr.io/jvdillon/netv-ffmpeg:latest
+# TODO: Replace with your own published image once available:
+#   FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
+ARG FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
 FROM ${FFMPEG_IMAGE}
 
 # Build metadata (passed from workflow, used for documentation/debugging)
@@ -27,9 +29,9 @@ ARG NVIDIA=cuda:13.0
 ARG BASE_IMAGE=ubuntu:24.04
 
 # Store build info as labels
-LABEL org.opencontainers.image.description="netv with AI Upscale (TensorRT)"
-LABEL ai.netv.cuda="${NVIDIA}"
-LABEL ai.netv.base="${BASE_IMAGE}"
+LABEL org.opencontainers.image.description="tolochatv with AI Upscale (TensorRT)"
+LABEL ai.tolochatv.cuda="${NVIDIA}"
+LABEL ai.tolochatv.base="${BASE_IMAGE}"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -83,13 +85,13 @@ RUN if python3 -m pip install --help 2>&1 | grep -q -- '--break-system-packages'
 EXPOSE 8000
 
 # Environment variables (see README for details)
-ENV NETV_PORT=8000
-ENV NETV_HTTPS=""
+ENV TOLOCHATV_PORT=8000
+ENV TOLOCHATV_HTTPS=""
 ENV LOG_LEVEL=INFO
 ENV SR_ENGINE_DIR=/models
 
 # Create non-root user
-RUN useradd -m netv
+RUN useradd -m tolochatv
 
 # Copy entrypoint and set permissions with validation
 COPY entrypoint-ai_upscale.sh /app/entrypoint.sh
@@ -98,7 +100,7 @@ RUN chmod +x /app/entrypoint.sh && \
 
 # Create models directory with proper permissions (will be a volume mount point)
 RUN mkdir -p /models && \
-    chown netv:netv /models && \
+    chown tolochatv:tolochatv /models && \
     chmod 755 /models && \
     test -d /models && test -w /models || { echo "ERROR: /models not writable"; exit 1; }
 VOLUME /models

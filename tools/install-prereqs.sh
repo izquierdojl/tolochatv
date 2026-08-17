@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install prerequisites for netv
+# Install prerequisites for tolochatv
 set -e
 
 echo "=== Checking prerequisites ==="
@@ -27,4 +27,4 @@ echo ""
 echo "Next steps:"
 echo "  1. Run: ./tools/install-letsencrypt.sh <your-domain>"
 echo "  2. Run: ./tools/install-ffmpeg.sh  (optional, for transcoding)"
-echo "  3. Run: sudo ./tools/install-netv.sh"
+echo "  3. Run: sudo ./tools/install-tolochatv.sh"

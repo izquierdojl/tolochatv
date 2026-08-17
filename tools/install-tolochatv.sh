@@ -1,8 +1,8 @@
 #!/bin/bash
-# Install netv systemd service
+# Install tolochatv systemd service
 # Prerequisites: uv (install time only), install-letsencrypt.sh
 #
-# Usage: sudo ./install-netv.sh [--port PORT]
+# Usage: sudo ./install-tolochatv.sh [--port PORT]
 #   --port PORT  Port to listen on (default: 8000)
 set -e
 
@@ -52,12 +52,12 @@ else
     HTTPS_FLAG="--https"
 fi
 
-echo "=== Installing netv for user: $USER (port $PORT) ==="
+echo "=== Installing tolochatv for user: $USER (port $PORT) ==="
 
 echo "=== Adding $USER to ssl-cert group ==="
 sudo usermod -aG ssl-cert "$USER"
 
-echo "=== Installing netv systemd service ==="
+echo "=== Installing tolochatv systemd service ==="
 
 # Build PATH - prefer custom ffmpeg in ~/.local/bin if it exists
 USER_LOCAL_BIN="/home/$USER/.local/bin"
@@ -98,9 +98,9 @@ Environment=\"LIBVA_DRIVERS_PATH=$DRI_PATH\""
     fi
 fi
 
-cat <<EOF | sudo tee /etc/systemd/system/netv.service
+cat <<EOF | sudo tee /etc/systemd/system/tolochatv.service
 [Unit]
-Description=NetV IPTV Server
+Description=TolochaTV IPTV Server
 After=network.target
 
 [Service]
@@ -119,23 +119,23 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable netv
-sudo systemctl start netv
+sudo systemctl enable tolochatv
+sudo systemctl start tolochatv
 
 if [ -n "$HTTPS_FLAG" ]; then
-    echo "=== Installing certbot deploy hook (restart netv on renewal) ==="
-    cat <<'EOF' | sudo tee /etc/letsencrypt/renewal-hooks/deploy/netv
+    echo "=== Installing certbot deploy hook (restart tolochatv on renewal) ==="
+    cat <<'EOF' | sudo tee /etc/letsencrypt/renewal-hooks/deploy/tolochatv
 #!/bin/bash
-# Restart netv after cert renewal
-systemctl restart netv
+# Restart tolochatv after cert renewal
+systemctl restart tolochatv
 EOF
-    sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/netv
+    sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/tolochatv
 fi
 
 echo ""
 echo "=== Done ==="
 echo ""
 echo "Commands:"
-echo "  sudo systemctl status netv     # Check status"
-echo "  sudo systemctl restart netv    # Restart after code changes"
-echo "  journalctl -u netv -f          # View logs"
+echo "  sudo systemctl status tolochatv     # Check status"
+echo "  sudo systemctl restart tolochatv    # Restart after code changes"
+echo "  journalctl -u tolochatv -f          # View logs"

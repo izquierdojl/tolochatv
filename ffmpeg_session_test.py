@@ -764,7 +764,7 @@ class TestCleanupAndRecoverSessions:
         """Removes dirs without session.json."""
         with tempfile.TemporaryDirectory() as tmp:
             transcode_dir = pathlib.Path(tmp)
-            orphan = transcode_dir / "netv_transcode_orphan"
+            orphan = transcode_dir / "tolochatv_transcode_orphan"
             orphan.mkdir()
             (orphan / "seg000.ts").write_bytes(b"data")
 
@@ -780,7 +780,7 @@ class TestCleanupAndRecoverSessions:
         """Recovers valid VOD session with segments."""
         with tempfile.TemporaryDirectory() as tmp:
             transcode_dir = pathlib.Path(tmp)
-            vod_dir = transcode_dir / "netv_transcode_vod123"
+            vod_dir = transcode_dir / "tolochatv_transcode_vod123"
             vod_dir.mkdir()
 
             # Create session.json
@@ -807,7 +807,7 @@ class TestCleanupAndRecoverSessions:
         """Removes expired VOD session (older than cache timeout)."""
         with tempfile.TemporaryDirectory() as tmp:
             transcode_dir = pathlib.Path(tmp)
-            vod_dir = transcode_dir / "netv_transcode_expired"
+            vod_dir = transcode_dir / "tolochatv_transcode_expired"
             vod_dir.mkdir()
 
             session_info = {

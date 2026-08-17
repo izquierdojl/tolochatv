@@ -1,4 +1,4 @@
-# neTV
+# TolochaTV
 
 A minimal, self-hosted web interface for IPTV streams.
 
@@ -14,11 +14,11 @@ A minimal, self-hosted web interface for IPTV streams.
 
 ## Why This Exists
 
-We built neTV because we couldn't find a clean, lightweight interface for
+We built TolochaTV because we couldn't find a clean, lightweight interface for
 Xtream IPTV services. Existing solutions were either bloated media centers or
 clunky apps that didn't work well across devices.
 
-**neTV is intentionally minimal.** It does one thing: play your IPTV streams
+**TolochaTV is intentionally minimal.** It does one thing: play your IPTV streams
 with a clean UI that works on desktop, tablet, mobile, and Chromecast.
 
 We also prioritize **keyboard navigation** throughout (though still rough
@@ -80,10 +80,10 @@ If you want a full-featured media center, you might be happier with:
 - **[Emby](https://emby.media/)** - Media server with IPTV support
 - **[Plex](https://plex.tv/)** - Popular media platform with live TV
 
-These are excellent, mature projects with large communities. neTV exists for
+These are excellent, mature projects with large communities. TolochaTV exists for
 users who find them overkill and just want a simple IPTV player.
 
-| | neTV | [nodecast-tv] | [Jellyfin] | [Emby] | [Plex] |
+| | TolochaTV | [nodecast-tv] | [Jellyfin] | [Emby] | [Plex] |
 |---|---|---|---|---|---|
 | **Focus** | IPTV | IPTV | General media | General media | General media |
 | **Xtream Codes** | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -124,7 +124,7 @@ users who find them overkill and just want a simple IPTV player.
 | **License** | Apache 2.0 | GPL v3 | GPL v2 | GPL v2 | Proprietary |
 | **Stack** | Python, FFmpeg | Node.js | .NET, FFmpeg | .NET, FFmpeg | Proprietary |
 
-*Corrections welcome — [open an issue](https://github.com/jvdillon/netv/issues).*
+*Corrections welcome — [open an issue](https://github.com/<your-username>/tolochatv/issues).*
 
 [nodecast-tv]: https://github.com/technomancer702/nodecast-tv
 [Jellyfin]: https://jellyfin.org
@@ -140,8 +140,10 @@ Create a `docker-compose.yml`:
 
 ```yaml
 services:
-  netv:
-    image: ghcr.io/jvdillon/netv:latest
+  tolochatv:
+    # TODO: Replace with your own published image once available:
+    #   image: ghcr.io/<your-username>/tolochatv:latest
+    image: ghcr.io/<your-username>/tolochatv:latest
     ports:
       - "8000:8000"
     volumes:
@@ -159,6 +161,10 @@ docker compose up -d
 ```
 
 Open http://localhost:8000. To update: `docker compose pull && docker compose up -d`
+
+> **Note:** The prebuilt image `ghcr.io/<your-username>/tolochatv` is not
+> published yet. Until it exists, build from source instead:
+> `docker compose build && docker compose up -d`.
 
 #### Optional: Nonfree (proprietary) FFMPEG optimized for Nvidia or AMD and/or Intel GPU
 
@@ -208,7 +214,7 @@ Find your CUDA version ([source](https://docs.nvidia.com/cuda/cuda-toolkit-relea
 
 Then run:
 ```bash
-FFMPEG_IMAGE=ghcr.io/jvdillon/netv-ffmpeg:<cuda-version> docker compose --profile nvidia up -d
+FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:<cuda-version> docker compose --profile nvidia up -d
 ```
 
 For AMD or Intel, it does not matter which version you choose nor do you need Cuda installed.
@@ -218,14 +224,14 @@ For AMD or Intel, it does not matter which version you choose nor do you need Cu
 For real-time 2x or 4x AI upscaling (4x: 720p → 4K at ~39fps or 480p → 4K at ~85fps on RTX 5090):
 
 ```bash
-git clone https://github.com/jvdillon/netv.git
-cd netv
-docker build -f Dockerfile.ai_upscale -t netv-ai-upscale .
-docker run --gpus all -v netv-models:/models -v ./cache:/app/cache -p 8000:8000 netv-ai-upscale
+git clone https://github.com/<your-username>/tolochatv.git
+cd tolochatv
+docker build -f Dockerfile.ai_upscale -t tolochatv-ai-upscale .
+docker run --gpus all -v tolochatv-models:/models -v ./cache:/app/cache -p 8000:8000 tolochatv-ai-upscale
 ```
 
 First start builds TensorRT engines for your GPU (~2-3 min). Engines are cached in the
-`netv-models` volume for instant subsequent starts.
+`tolochatv-models` volume for instant subsequent starts.
 
 Requirements:
 - Nvidia GPU (RTX 20xx or newer recommended)
@@ -237,8 +243,8 @@ Requirements:
 For customization or development:
 
 ```bash
-git clone https://github.com/jvdillon/netv.git
-cd netv
+git clone https://github.com/<your-username>/tolochatv.git
+cd tolochatv
 docker compose build                              # optimized FFmpeg (default)
 # FFMPEG_IMAGE=ubuntu:24.04 docker compose build  # or stock FFmpeg
 docker compose up -d
@@ -249,8 +255,8 @@ To update: `git pull && docker compose build && docker compose up -d`
 #### Options
 
 ```bash
-NETV_PORT=9000 docker compose up -d        # custom port
-NETV_HTTPS=1 docker compose up -d          # enable HTTPS (mount certs first)
+TOLOCHATV_PORT=9000 docker compose up -d        # custom port
+TOLOCHATV_HTTPS=1 docker compose up -d          # enable HTTPS (mount certs first)
 ```
 
 ### Debian/Ubuntu (`systemd`)
@@ -272,17 +278,17 @@ uv sync --group ai_upscale
 ./tools/install-ai_upscale.sh
 
 # 5. Install systemd service
-sudo ./tools/install-netv.sh # default port=8000 or --port 9000
+sudo ./tools/install-tolochatv.sh # default port=8000 or --port 9000
 ```
 
 Manage with:
 
 ```bash
-sudo systemctl status netv       # Check status
-sudo systemctl restart netv      # Restart after updates
-journalctl -u netv -f            # View logs
-sudo systemctl edit netv --full  # Change port or other settings
-sudo ./tools/uninstall-netv.sh   # Uninstall
+sudo systemctl status tolochatv       # Check status
+sudo systemctl restart tolochatv      # Restart after updates
+journalctl -u tolochatv -f            # View logs
+sudo systemctl edit tolochatv --full  # Change port or other settings
+sudo ./tools/uninstall-tolochatv.sh   # Uninstall
 ```
 
 ### Development/Testing
@@ -290,8 +296,8 @@ sudo ./tools/uninstall-netv.sh   # Uninstall
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/jvdillon/netv.git
-cd netv
+git clone https://github.com/<your-username>/tolochatv.git
+cd tolochatv
 uv run ./main.py --port 8000  # --https
 ```
 
@@ -329,7 +335,7 @@ docker compose logs -f
 **Systemd:**
 
 ```bash
-sudo systemctl edit netv
+sudo systemctl edit tolochatv
 ```
 
 Add:
@@ -342,8 +348,8 @@ Environment="LOG_LEVEL=DEBUG"
 Then restart and view logs:
 
 ```bash
-sudo systemctl restart netv
-journalctl -u netv -f
+sudo systemctl restart tolochatv
+journalctl -u tolochatv -f
 ```
 
 **Manual / Development:**
@@ -388,10 +394,10 @@ wget http://192.168.1.87/lineup.m3u -O tools/lineup.m3u
 ./tools/alignm3u.py --input tools/lineup.m3u --xmltv tools/xmltv.xml --output tools/ota.m3u
 ```
 
-Then add `tools/ota.m3u` as an M3U source in neTV settings.
+Then add `tools/ota.m3u` as an M3U source in TolochaTV settings.
 
 And set up a cron job to refresh the guide daily (e.g.,
-`0 5 * * *  /usr/bin/python3 /path/to/netv/tools/zap2xml.py --zip 90210 && cp /path/to/netv/tools/xmltv.xml /var/www/html/`).
+`0 5 * * *  /usr/bin/python3 /path/to/tolochatv/tools/zap2xml.py --zip 90210 && cp /path/to/tolochatv/tools/xmltv.xml /var/www/html/`).
 
 ### How do I enable hardware transcoding?
 
@@ -459,24 +465,19 @@ nvcc --version
 | `j` | Jump to time |
 | `Esc` | Back / close |
 
-### What Does "neTV" Mean?
+### What Does "TolochaTV" Mean?
 
-Yes.
-
-We leave pronunciation and meaning as an exercise for your idiom:
-
-- **N-E-T-V** -- "Any TV", say it out loud
-- **≠TV** -- "Not Equals TV", because we're `!=` traditional cable
-- **Net-V** -- "Net Vision", because it streams video over your network
-- **Ni!-TV** -- For the [Knights who say Ni](https://www.youtube.com/watch?v=zIV4poUZAQo)
+We leave pronunciation and meaning as an exercise for your idiom. The project
+began as a fork of [neTV](https://github.com/jvdillon/netv) -- the original
+joke was that **N-E-T-V** means "Any TV", say it out loud.
 
 We will also accept a shrubbery. One that looks nice. And not too expensive.
 
-## Support
+## Attribution
 
-If you find neTV useful, consider buying me a coffee:
-
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/jvdillon)
+TolochaTV is a derivative work of [netv](https://github.com/jvdillon/netv)
+by Joshua V. Dillon, licensed under the Apache License 2.0.
+See [LICENSE](LICENSE) for details.
 
 ## License
 

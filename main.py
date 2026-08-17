@@ -342,7 +342,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     ffmpeg_session.shutdown()
 
 
-app = FastAPI(title="neTV", lifespan=lifespan)
+app = FastAPI(title="TolochaTV", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
 

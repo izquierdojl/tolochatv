@@ -299,7 +299,7 @@ def cleanup_and_recover_sessions() -> None:
     now = time.time()
     removed = recovered = 0
 
-    for d in get_transcode_dir().glob("netv_transcode_*"):
+    for d in get_transcode_dir().glob("tolochatv_transcode_*"):
         if not d.is_dir():
             continue
 
@@ -829,7 +829,7 @@ async def _do_start_transcode(
 
     session_id = str(uuid.uuid4())
     output_dir = tempfile.mkdtemp(
-        prefix=f"netv_transcode_{session_id}_",
+        prefix=f"tolochatv_transcode_{session_id}_",
         dir=get_transcode_dir(),
     )
     playlist_path = pathlib.Path(output_dir) / "stream.m3u8"

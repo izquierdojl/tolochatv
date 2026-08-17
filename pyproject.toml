@@ -1,5 +1,5 @@
 [project]
-name = "netv"
+name = "tolochatv"
 version = "0.1.0"
 description = "Minimal self-hosted IPTV web interface with EPG guide, VOD, and Chromecast"
 readme = "README.md"
@@ -46,7 +46,8 @@ ai_upscale = [
 ]
 
 [project.urls]
-Repository = "https://github.com/jvdillon/netv"
+Repository = "https://github.com/<your-username>/tolochatv"
+Original = "https://github.com/jvdillon/netv"
 
 [build-system]
 requires = ["hatchling"]

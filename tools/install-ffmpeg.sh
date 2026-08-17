@@ -703,10 +703,10 @@ extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float                  rsqrt
     fi
 
     # Pin nv-codec-headers for specific builds:
-    # - netv-ffmpeg:cuda12.4 OR CUDA_VERSION=12.4 -> use NVENC API 12.2 headers (sdk/12.2)
-    # - otherwise                                 -> use upstream master
+    # - tolochatv-ffmpeg:cuda12.4 OR CUDA_VERSION=12.4 -> use NVENC API 12.2 headers (sdk/12.2)
+    # - otherwise                                       -> use upstream master
     NV_CODEC_REF="master"
-    if [ "${FFMPEG_IMAGE:-}" = "netv-ffmpeg:cuda12.4" ] || [ "${CUDA_VERSION:-}" = "12-4" ]; then
+    if [ "${FFMPEG_IMAGE:-}" = "tolochatv-ffmpeg:cuda12.4" ] || [ "${CUDA_VERSION:-}" = "12-4" ]; then
         NV_CODEC_REF="sdk/12.2"
     fi
     echo "nv-codec-headers: FFMPEG_IMAGE=${FFMPEG_IMAGE:-unset}, CUDA_VERSION=${CUDA_VERSION:-unset}, ref=$NV_CODEC_REF"

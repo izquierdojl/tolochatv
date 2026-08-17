@@ -1,6 +1,6 @@
 # AGENTS.md
 
-neTV: self-hosted IPTV player. Single FastAPI app (`main.py`) + flat Python modules. NOT a package — modules are imported by filename (`import main`, `import cache`, etc.), so name collisions matter and top-level files are the app.
+TolochaTV: self-hosted IPTV player. Single FastAPI app (`main.py`) + flat Python modules. NOT a package — modules are imported by filename (`import main`, `import cache`, etc.), so name collisions matter and top-level files are the app.
 
 ## Commands (dev, uses uv)
 
@@ -41,7 +41,7 @@ neTV: self-hosted IPTV player. Single FastAPI app (`main.py`) + flat Python modu
 
 ## Runtime / deploy
 
-- Docker: `docker compose build` needs the prebuilt FFmpeg base image `ghcr.io/jvdillon/netv-ffmpeg:latest` (arg `FFMPEG_IMAGE`); `FFMPEG_IMAGE=ubuntu:24.04 docker compose build` uses stock apt ffmpeg. NVIDIA GPU requires `docker compose --profile nvidia up -d`.
-- Container runs as non-root user `netv` via `entrypoint.sh` (fixes `./cache` ownership + `/dev/dri` group).
-- Config through env vars: `NETV_PORT`, `NETV_HTTPS`, `LOG_LEVEL` (DEBUG for verbose logs).
+- Docker: `docker compose build` needs the prebuilt FFmpeg base image `ghcr.io/<your-username>/tolochatv-ffmpeg:latest` (arg `FFMPEG_IMAGE`) — not published yet, build/override until it exists; `FFMPEG_IMAGE=ubuntu:24.04 docker compose build` uses stock apt ffmpeg. NVIDIA GPU requires `docker compose --profile nvidia up -d`.
+- Container runs as non-root user `tolochatv` via `entrypoint.sh` (fixes `./cache` ownership + `/dev/dri` group).
+- Config through env vars: `TOLOCHATV_PORT`, `TOLOCHATV_HTTPS`, `LOG_LEVEL` (DEBUG for verbose logs).
 - Release flow: push `v*` tags (`.github/workflows/release.yml` builds + pushes ghcr image).
