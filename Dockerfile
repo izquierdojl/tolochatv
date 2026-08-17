@@ -13,8 +13,8 @@
 # - All major codecs (x264, x265, VP9, AV1, etc.)
 
 # TODO: Replace with your own published image once available:
-#   FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
-ARG FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:latest
+#   FFMPEG_IMAGE=ghcr.io/izquierdojl/tolochatv-ffmpeg:latest
+ARG FFMPEG_IMAGE=ghcr.io/izquierdojl/tolochatv-ffmpeg:latest
 FROM ${FFMPEG_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive

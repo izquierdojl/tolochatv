@@ -41,7 +41,7 @@ TolochaTV: self-hosted IPTV player. Single FastAPI app (`main.py`) + flat Python
 
 ## Runtime / deploy
 
-- Docker: `docker compose build` needs the prebuilt FFmpeg base image `ghcr.io/<your-username>/tolochatv-ffmpeg:latest` (arg `FFMPEG_IMAGE`) — not published yet, build/override until it exists; `FFMPEG_IMAGE=ubuntu:24.04 docker compose build` uses stock apt ffmpeg. NVIDIA GPU requires `docker compose --profile nvidia up -d`.
+- Docker: `docker compose build` needs the prebuilt FFmpeg base image `ghcr.io/izquierdojl/tolochatv-ffmpeg:latest` (arg `FFMPEG_IMAGE`) — not published yet, build/override until it exists; `FFMPEG_IMAGE=ubuntu:24.04 docker compose build` uses stock apt ffmpeg. NVIDIA GPU requires `docker compose --profile nvidia up -d`.
 - Container runs as non-root user `tolochatv` via `entrypoint.sh` (fixes `./cache` ownership + `/dev/dri` group).
 - Config through env vars: `TOLOCHATV_PORT`, `TOLOCHATV_HTTPS`, `LOG_LEVEL` (DEBUG for verbose logs).
 - Release flow: push `v*` tags (`.github/workflows/release.yml` builds + pushes ghcr image).

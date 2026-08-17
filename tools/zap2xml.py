@@ -83,7 +83,7 @@ def main() -> None:
             "source-info-url": f"https://{args.base_url}/grid-affiliates.html?aid=gapzap",
             "source-info-name": "zap2it",
             "generator-info-name": "zap2xml.py",
-            "generator-info-url": "https://github.com/<your-username>/tolochatv",
+            "generator-info-url": "https://github.com/izquierdojl/tolochatv",
         },
     )
 

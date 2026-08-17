@@ -124,7 +124,7 @@ users who find them overkill and just want a simple IPTV player.
 | **License** | Apache 2.0 | GPL v3 | GPL v2 | GPL v2 | Proprietary |
 | **Stack** | Python, FFmpeg | Node.js | .NET, FFmpeg | .NET, FFmpeg | Proprietary |
 
-*Corrections welcome — [open an issue](https://github.com/<your-username>/tolochatv/issues).*
+*Corrections welcome — [open an issue](https://github.com/izquierdojl/tolochatv/issues).*
 
 [nodecast-tv]: https://github.com/technomancer702/nodecast-tv
 [Jellyfin]: https://jellyfin.org
@@ -142,8 +142,8 @@ Create a `docker-compose.yml`:
 services:
   tolochatv:
     # TODO: Replace with your own published image once available:
-    #   image: ghcr.io/<your-username>/tolochatv:latest
-    image: ghcr.io/<your-username>/tolochatv:latest
+    #   image: ghcr.io/izquierdojl/tolochatv:latest
+    image: ghcr.io/izquierdojl/tolochatv:latest
     ports:
       - "8000:8000"
     volumes:
@@ -162,7 +162,7 @@ docker compose up -d
 
 Open http://localhost:8000. To update: `docker compose pull && docker compose up -d`
 
-> **Note:** The prebuilt image `ghcr.io/<your-username>/tolochatv` is not
+> **Note:** The prebuilt image `ghcr.io/izquierdojl/tolochatv` is not
 > published yet. Until it exists, build from source instead:
 > `docker compose build && docker compose up -d`.
 
@@ -214,7 +214,7 @@ Find your CUDA version ([source](https://docs.nvidia.com/cuda/cuda-toolkit-relea
 
 Then run:
 ```bash
-FFMPEG_IMAGE=ghcr.io/<your-username>/tolochatv-ffmpeg:<cuda-version> docker compose --profile nvidia up -d
+FFMPEG_IMAGE=ghcr.io/izquierdojl/tolochatv-ffmpeg:<cuda-version> docker compose --profile nvidia up -d
 ```
 
 For AMD or Intel, it does not matter which version you choose nor do you need Cuda installed.
@@ -224,7 +224,7 @@ For AMD or Intel, it does not matter which version you choose nor do you need Cu
 For real-time 2x or 4x AI upscaling (4x: 720p → 4K at ~39fps or 480p → 4K at ~85fps on RTX 5090):
 
 ```bash
-git clone https://github.com/<your-username>/tolochatv.git
+git clone https://github.com/izquierdojl/tolochatv.git
 cd tolochatv
 docker build -f Dockerfile.ai_upscale -t tolochatv-ai-upscale .
 docker run --gpus all -v tolochatv-models:/models -v ./cache:/app/cache -p 8000:8000 tolochatv-ai-upscale
@@ -243,7 +243,7 @@ Requirements:
 For customization or development:
 
 ```bash
-git clone https://github.com/<your-username>/tolochatv.git
+git clone https://github.com/izquierdojl/tolochatv.git
 cd tolochatv
 docker compose build                              # optimized FFmpeg (default)
 # FFMPEG_IMAGE=ubuntu:24.04 docker compose build  # or stock FFmpeg
@@ -296,7 +296,7 @@ sudo ./tools/uninstall-tolochatv.sh   # Uninstall
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/<your-username>/tolochatv.git
+git clone https://github.com/izquierdojl/tolochatv.git
 cd tolochatv
 uv run ./main.py --port 8000  # --https
 ```

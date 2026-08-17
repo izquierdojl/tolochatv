@@ -46,7 +46,7 @@ ai_upscale = [
 ]
 
 [project.urls]
-Repository = "https://github.com/<your-username>/tolochatv"
+Repository = "https://github.com/izquierdojl/tolochatv"
 Original = "https://github.com/jvdillon/netv"
 
 [build-system]
