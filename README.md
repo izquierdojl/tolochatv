@@ -310,6 +310,38 @@ pip install .
 
 Open http://localhost:8000, create an admin account, and add your IPTV source.
 
+#### Verifying the app in the browser (local run)
+
+Quick way to check the app (and the rebrand) end-to-end from your browser:
+
+```bash
+uv sync                       # first time only: installs dependencies into .venv
+uv run ./main.py --port 8000  # start the server (Ctrl+C to stop)
+```
+
+Then open **http://localhost:8000**:
+
+1. **First run** → you land on the **Setup** page (`/setup`) to create the admin
+   account. The page title shows `Setup - TolochaTV`.
+2. After setup, `/` redirects (HTTP 303) to **Login**; the login page shows the
+   `TolochaTV` heading.
+3. Log in and go to **Settings** to add your IPTV source (Xtream Codes URL or
+   M3U playlist). Guide / VOD / Series / Search pages all carry the
+   `TolochaTV` title.
+4. To confirm the rebrand: view the browser tab titles (they read
+   `... - TolochaTV`) and check the FastAPI API title at
+   `/openapi.json` (`"title": "TolochaTV"`).
+
+Sanity check from the command line while the server runs:
+
+```bash
+curl -s http://localhost:8000/login | grep -c TolochaTV   # > 0
+curl -s http://localhost:8000/login | grep -ci netv       # 0 (no leftover branding)
+```
+
+To stop the server: `Ctrl+C` in the terminal, or kill the process
+(`taskkill /PID <pid>` on Windows).
+
 ### Additional Gems
 
 There's also some useful applications in `tools/`:
