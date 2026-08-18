@@ -283,6 +283,161 @@ class TestGuide:
             assert resp.status_code == 200
 
 
+class TestChannelsTree:
+    """Tests for the sidebar channel tree API."""
+
+    def _set_guide_filter(self, tmp_path: Path, cats: list[str]) -> None:
+        user_dir = tmp_path / "users" / "testuser"
+        user_dir.mkdir(parents=True, exist_ok=True)
+        (user_dir / "settings.json").write_text(json.dumps({"guide_filter": cats}))
+
+    def _seed_cache(self) -> None:
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"},
+            {"category_id": "2", "category_name": "Movies"},
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "CNN", "category_ids": ["1"], "stream_icon": ""},
+            {"stream_id": 2, "name": "Film", "category_ids": ["2"], "stream_icon": ""},
+        ]
+
+    def test_channels_tree_requires_auth(self, client):
+        resp = client.get("/api/channels/tree", follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/login"
+
+    def test_channels_tree_orders_groups_alphabetically(self, auth_client, tmp_path):
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "Zeta"},
+            {"category_id": "2", "category_name": "Alpha"},
+            {"category_id": "3", "category_name": "beta"},
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "Z", "category_ids": ["1"], "stream_icon": ""},
+            {"stream_id": 2, "name": "A", "category_ids": ["2"], "stream_icon": ""},
+            {"stream_id": 3, "name": "B", "category_ids": ["3"], "stream_icon": ""},
+        ]
+        self._set_guide_filter(tmp_path, ["1", "3", "2"])
+
+        resp = auth_client.get("/api/channels/tree")
+        assert resp.status_code == 200
+        data = resp.json()
+        # Filter decides which groups; order is always alphabetical (case-insensitive)
+        assert [g["category_name"] for g in data["groups"]] == ["Alpha", "beta", "Zeta"]
+
+    def test_channels_tree_excludes_blocked_groups(self, auth_client, tmp_path):
+        import auth
+
+        self._seed_cache()
+        self._set_guide_filter(tmp_path, ["1", "2"])
+        auth.set_user_limits("testuser", unavailable_groups=["cat:1"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert [g["category_name"] for g in data["groups"]] == ["Movies"]
+
+    def test_channels_tree_skips_groups_without_channels(self, auth_client, tmp_path):
+        self._seed_cache()
+        cache_module.get_cache()["live_categories"].append(
+            {"category_id": "3", "category_name": "Empty"}
+        )
+        self._set_guide_filter(tmp_path, ["1", "3"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert [g["category_name"] for g in data["groups"]] == ["News"]
+
+    def test_channels_tree_multi_category_in_both_groups(self, auth_client, tmp_path):
+        self._seed_cache()
+        cache_module.get_cache()["live_streams"].append(
+            {"stream_id": 3, "name": "Sports News", "category_ids": ["1", "2"], "stream_icon": ""}
+        )
+        self._set_guide_filter(tmp_path, ["1", "2"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        by_name = {g["category_name"]: g for g in data["groups"]}
+        assert "Sports News" in {c["name"] for c in by_name["News"]["channels"]}
+        assert "Sports News" in {c["name"] for c in by_name["Movies"]["channels"]}
+
+    def test_channels_tree_includes_uncategorized(self, auth_client, tmp_path):
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"},
+            {"category_id": "uncategorized", "category_name": "Uncategorized"},
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "CNN", "category_ids": ["1"], "stream_icon": ""},
+            {"stream_id": 2, "name": "Odd One", "category_ids": ["uncategorized"], "stream_icon": ""},
+        ]
+        self._set_guide_filter(tmp_path, ["uncategorized"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert data["groups"][0]["category_name"] == "Uncategorized"
+        assert [c["name"] for c in data["groups"][0]["channels"]] == ["Odd One"]
+
+    def test_channels_tree_wraps_icons_through_logo_proxy(self, auth_client, tmp_path):
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"}
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {
+                "stream_id": 1,
+                "name": "CNN",
+                "category_ids": ["1"],
+                "stream_icon": "http://example.com/logo.png",
+            }
+        ]
+        self._set_guide_filter(tmp_path, ["1"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert data["groups"][0]["channels"][0]["icon"].startswith("/api/logo?source=example.com")
+
+    def test_channels_tree_shows_all_groups_when_no_filter(self, auth_client):
+        self._seed_cache()
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert [g["category_name"] for g in data["groups"]] == ["Movies", "News"]
+
+    def test_channels_tree_no_filter_still_excludes_blocked_groups(self, auth_client):
+        import auth
+
+        self._seed_cache()
+        auth.set_user_limits("testuser", unavailable_groups=["cat:2"])
+
+        resp = auth_client.get("/api/channels/tree")
+        data = resp.json()
+        assert [g["category_name"] for g in data["groups"]] == ["News"]
+
+    def test_channels_tree_empty_when_no_cache(self, auth_client):
+        with patch("main.load_file_cache", return_value=None):
+            resp = auth_client.get("/api/channels/tree")
+            assert resp.status_code == 200
+            assert resp.json() == {"groups": []}
+
+    def test_guide_renders_channels_tree_button_and_panel(self, auth_client):
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"}
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "CNN", "category_ids": ["1"], "epg_channel_id": ""}
+        ]
+
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/guide")
+        assert resp.status_code == 200
+        assert b"channels-tree-btn" in resp.content
+        assert b"channels-panel" in resp.content
+
+    def test_channels_i18n_keys_served(self, auth_client):
+        resp = auth_client.get("/api/i18n.js")
+        assert resp.status_code == 200
+        assert '"Channels":"Canales"' in resp.text or '"Channels": "Canales"' in resp.text
+        assert "No channels available" in resp.text
+
+
 class TestVod:
     """Tests for VOD page."""
 

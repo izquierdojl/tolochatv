@@ -243,3 +243,243 @@
   }
 
 })();
+
+// ============================================================
+// Channels Tree (fixed sidebar panel)
+// ============================================================
+
+(function() {
+  'use strict';
+
+  const btn = document.getElementById('channels-tree-btn');
+  const panel = document.getElementById('channels-panel');
+  const treeEl = document.getElementById('channels-tree');
+  const toggleAllBtn = document.getElementById('channels-toggle-all');
+  if (!btn || !panel || !treeEl) return;
+
+  const STORE_OPEN = 'tolochatv.channels.panelOpen';
+  const STORE_EXPANDED = 'tolochatv.channels.expanded';
+
+  const expanded = new Map(); // category_id -> expanded bool
+  let treeData = null;        // cached API response
+  let panelOpen = false;
+
+  function t(key) {
+    if (typeof I18N !== 'undefined' && I18N.t) return I18N.t(key);
+    return key;
+  }
+
+  function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  function saveExpanded() {
+    try {
+      const ids = Array.from(expanded.entries())
+        .filter(([, open]) => open)
+        .map(([id]) => id);
+      localStorage.setItem(STORE_EXPANDED, JSON.stringify(ids));
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function allGroupsExpanded() {
+    return !!treeData && !!treeData.groups && treeData.groups.length > 0 &&
+      treeData.groups.every(g => expanded.get(g.category_id));
+  }
+
+  function updateToggleLabel() {
+    if (!toggleAllBtn) return;
+    toggleAllBtn.textContent = allGroupsExpanded() ? t('Collapse all') : t('Expand all');
+  }
+
+  function loadState() {
+    // Fixed panel: open by default on first visit; groups start collapsed.
+    let isOpen = true;
+    try {
+      const raw = localStorage.getItem(STORE_OPEN);
+      if (raw === '0' || raw === '1') isOpen = raw === '1';
+      const ids = JSON.parse(localStorage.getItem(STORE_EXPANDED) || '[]');
+      if (Array.isArray(ids)) ids.forEach(id => expanded.set(String(id), true));
+    } catch (e) { /* storage unavailable */ }
+    return isOpen;
+  }
+
+  function panelFocusables() {
+    return Array.from(panel.querySelectorAll('a[href], button:not([disabled]), [tabindex="0"]'))
+      .filter(el => el.offsetParent !== null);
+  }
+
+  function renderTree(focusCat) {
+    treeEl.innerHTML = '';
+    const countEl = document.getElementById('channels-count');
+
+    if (!treeData || !treeData.groups || treeData.groups.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'text-sm text-gray-400 p-3';
+      empty.textContent = t('No channels available');
+      treeEl.appendChild(empty);
+      if (countEl) countEl.textContent = '';
+      updateToggleLabel();
+      return;
+    }
+
+    let total = 0;
+    treeData.groups.forEach(g => {
+      total += g.channels.length;
+      const isOpen = expanded.get(g.category_id) || false;
+
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'group-item';
+
+      const header = document.createElement('button');
+      header.type = 'button';
+      header.className = 'flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700';
+      header.tabIndex = 0;
+      header.dataset.cat = g.category_id;
+      header.innerHTML =
+        '<span class="chevron text-gray-400 text-xs w-4 flex-shrink-0">' + (isOpen ? '&#9660;' : '&#9654;') + '</span>' +
+        '<span class="truncate flex-1 text-left">' + escapeHtml(g.category_name) + '</span>' +
+        '<span class="text-xs text-gray-500 flex-shrink-0">' + g.channels.length + '</span>';
+      header.addEventListener('click', () => {
+        expanded.set(g.category_id, !(expanded.get(g.category_id) || false));
+        saveExpanded();
+        renderTree(g.category_id);
+      });
+      groupDiv.appendChild(header);
+
+      if (isOpen) {
+        const list = document.createElement('div');
+        list.className = 'pl-4';
+        g.channels.forEach(ch => {
+          const a = document.createElement('a');
+          a.href = '/play/live/' + ch.stream_id;
+          a.className = 'flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700';
+          a.tabIndex = 0;
+          const img = document.createElement('img');
+          img.src = ch.icon || '';
+          img.alt = '';
+          img.className = 'w-5 h-5 object-contain flex-shrink-0';
+          img.addEventListener('error', () => { img.style.display = 'none'; });
+          const name = document.createElement('span');
+          name.className = 'truncate';
+          name.textContent = ch.name;
+          a.appendChild(img);
+          a.appendChild(name);
+          list.appendChild(a);
+        });
+        groupDiv.appendChild(list);
+      }
+
+      treeEl.appendChild(groupDiv);
+    });
+
+    if (countEl) countEl.textContent = String(total);
+    updateToggleLabel();
+    if (focusCat) {
+      const target = treeEl.querySelector('button[data-cat="' + CSS.escape(focusCat) + '"]');
+      if (target) target.focus();
+    }
+  }
+
+  async function showPanel(focusFirst) {
+    panelOpen = true;
+    btn.classList.add('active');
+    panel.classList.remove('hidden');
+    try { localStorage.setItem(STORE_OPEN, '1'); } catch (e) { /* ignore */ }
+    if (!treeData) {
+      try {
+        const resp = await fetch('/api/channels/tree');
+        treeData = resp.ok ? await resp.json() : { groups: [] };
+      } catch (e) {
+        treeData = { groups: [] };
+      }
+    }
+    renderTree();
+    if (focusFirst) {
+      const first = panelFocusables()[0];
+      if (first) first.focus();
+    }
+  }
+
+  function hidePanel() {
+    panelOpen = false;
+    btn.classList.remove('active');
+    panel.classList.add('hidden');
+    try { localStorage.setItem(STORE_OPEN, '0'); } catch (e) { /* ignore */ }
+    btn.focus();
+  }
+
+  btn.addEventListener('click', () => {
+    if (panel.classList.contains('hidden')) {
+      showPanel(true);
+    } else {
+      hidePanel();
+    }
+  });
+
+  toggleAllBtn.addEventListener('click', () => {
+    if (!treeData || !treeData.groups || treeData.groups.length === 0) return;
+    if (allGroupsExpanded()) {
+      expanded.clear();
+    } else {
+      treeData.groups.forEach(g => expanded.set(g.category_id, true));
+    }
+    saveExpanded();
+    renderTree();
+  });
+
+  // Keyboard: while focus is inside the panel, intercept with priority over
+  // the global navigation handler (including pages with custom nav).
+  document.addEventListener('keydown', (e) => {
+    const inside = panelOpen && panel.contains(document.activeElement);
+    if (!inside) return;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      hidePanel();
+      return;
+    }
+
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      e.stopPropagation();
+      const items = panelFocusables();
+      if (!items.length) return;
+      const current = document.activeElement;
+      const idx = items.indexOf(current);
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const header = current && current.matches && current.matches('button[data-cat]')
+          ? current : null;
+        if (header) {
+          const cat = header.dataset.cat;
+          const isOpen = expanded.get(cat) || false;
+          if ((e.key === 'ArrowRight' && !isOpen) || (e.key === 'ArrowLeft' && isOpen)) {
+            expanded.set(cat, !isOpen);
+            saveExpanded();
+            renderTree(cat);
+          }
+        }
+        return;
+      }
+
+      let next = idx;
+      if (e.key === 'ArrowDown') next = idx + 1;
+      if (e.key === 'ArrowUp') next = idx - 1;
+      if (next < 0) next = items.length - 1;
+      if (next >= items.length) next = 0;
+      items[next].focus();
+      items[next].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, true);
+
+  // Restore persisted state on page load (fixed panel defaults to open)
+  if (loadState()) {
+    showPanel(false);
+  }
+
+})();
