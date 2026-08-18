@@ -22,4 +22,4 @@
 - [x] 4.1 Ejecutar `uv run ruff check .`
 - [x] 4.2 Ejecutar `uv run basedpyright`
 - [x] 4.3 Ejecutar `uv run pytest`
-- [ ] 4.4 Abrir PR de `feature/channels-sidebar` a `main` y revisar diff
+- [x] 4.4 Abrir PR de `feature/channels-sidebar` a `main` y revisar diff
