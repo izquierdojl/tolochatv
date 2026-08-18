@@ -95,6 +95,7 @@ import auth
 import epg
 import ffmpeg_command
 import ffmpeg_session
+import i18n
 
 
 log = logging.getLogger()
@@ -120,6 +121,9 @@ _MAX_FILTER_CATEGORIES = 10000
 APP_DIR = pathlib.Path(__file__).parent
 TEMPLATES = Jinja2Templates(directory=APP_DIR / "templates")
 TEMPLATES.env.auto_reload = True
+TEMPLATES.env.globals["_"] = i18n.t
+
+_t = i18n.t
 
 # Super-resolution engine directory (TensorRT engines for different resolutions)
 SR_ENGINE_DIR = pathlib.Path(
@@ -363,10 +367,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     if "text/html" not in accept:
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
+    lang = await resolve_locale(request)
     return TEMPLATES.TemplateResponse(
         request,
         "error.html",
-        {"title": f"Error {exc.status_code}", "message": exc.detail},
+        {"title": f"Error {exc.status_code}", "message": i18n.translate(exc.detail, lang), "lang": lang},
         status_code=exc.status_code,
     )
 
@@ -393,22 +398,49 @@ def require_admin(request: Request) -> dict:
     return user
 
 
+async def resolve_locale(request: Request) -> str:
+    """Resolve the active UI language for a request.
+
+    Priority: user preference > Accept-Language > server default.
+    Also sets the request-scoped language used by the `_t()` translation global.
+    Must be async so the contextvar is set in the request's own context
+    (sync dependencies run in a threadpool).
+    """
+    user = get_current_user(request)
+    user_lang = ""
+    if user:
+        user_lang = (await asyncio.to_thread(load_user_settings, user.get("sub", ""))).get(
+            "language", ""
+        )
+    accept = request.headers.get("accept-language", "")
+    server_default = (await asyncio.to_thread(load_server_settings)).get(
+        "default_language", i18n.DEFAULT_LANG
+    )
+    lang = i18n.resolve_language(user_lang, accept, server_default)
+    i18n.set_current_lang(lang)
+    return lang
+
+
 # =============================================================================
 # Auth Routes
 # =============================================================================
 
 
 @app.get("/setup", response_class=HTMLResponse)
-async def setup_page(request: Request):
+async def setup_page(
+    request: Request,
+    lang: Annotated[str, Depends(resolve_locale)],
+):
     """Initial setup page - create first admin user."""
     if not auth.is_setup_required():
         return RedirectResponse("/login", status_code=303)
-    return TEMPLATES.TemplateResponse(request, "setup.html", {"error": None})
+    return TEMPLATES.TemplateResponse(request, "setup.html", {"error": None, "lang": lang})
 
 
 @app.post("/setup")
 async def setup_create_user(
     request: Request,
+    lang: Annotated[str, Depends(resolve_locale)],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
     confirm: Annotated[str, Form()],
@@ -419,28 +451,38 @@ async def setup_create_user(
     # Validate
     if len(username) < 3:
         return TEMPLATES.TemplateResponse(
-            request, "setup.html", {"error": "Username must be at least 3 characters"}
+            request,
+            "setup.html",
+            {"error": _t("Username must be at least 3 characters"), "lang": lang},
         )
     if len(password) < 8:
         return TEMPLATES.TemplateResponse(
-            request, "setup.html", {"error": "Password must be at least 8 characters"}
+            request,
+            "setup.html",
+            {"error": _t("Password must be at least 8 characters"), "lang": lang},
         )
     if password != confirm:
         return TEMPLATES.TemplateResponse(
-            request, "setup.html", {"error": "Passwords do not match"}
+            request,
+            "setup.html",
+            {"error": _t("Passwords do not match"), "lang": lang},
         )
     auth.create_user(username, password)
     return RedirectResponse("/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, error: str | None = None):
+async def login_page(
+    request: Request,
+    lang: Annotated[str, Depends(resolve_locale)],
+    error: str | None = None,
+):
     """Login page - redirects to setup if no users exist."""
     if auth.is_setup_required():
         return RedirectResponse("/setup", status_code=303)
     last_user = request.cookies.get("last_user", "")
     return TEMPLATES.TemplateResponse(
-        request, "login.html", {"error": error, "last_user": last_user}
+        request, "login.html", {"error": error, "last_user": last_user, "lang": lang}
     )
 
 
@@ -460,12 +502,13 @@ def _check_rate_limit(ip: str) -> None:
         for k in stale[:100]:
             del _login_attempts[k]
     if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-        raise HTTPException(429, "Too many login attempts, try again later")
+        raise HTTPException(429, _t("Too many login attempts, try again later"))
 
 
 @app.post("/login")
 async def login(
     request: Request,
+    lang: Annotated[str, Depends(resolve_locale)],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
 ):
@@ -624,6 +667,7 @@ async def epg_events(_user: Annotated[dict, Depends(require_auth)]):
 async def guide_page(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     offset: int = 0,  # hours offset from now
     cats: str = "",  # comma-separated category IDs
 ):
@@ -653,9 +697,10 @@ async def guide_page(
                     "time_markers": [],
                     "offset": offset,
                     "window_start": "",
-                    "loading_message": "Loading channel data...",
+                    "loading_message": _t("Loading channel data..."),
                     "channel_count": 0,
                     "loading": True,
+                    "lang": lang,
                 },
             )
 
@@ -746,6 +791,7 @@ async def guide_page(
             "virtual_scroll": virtual_scroll_enabled,
             "loading": False,
             "content_access": _get_content_access(username),
+            "lang": lang,
         },
     )
 
@@ -954,6 +1000,7 @@ def _start_vod_background_load() -> None:
 async def vod_page(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     category: int | None = None,
     sort: str | None = None,
 ):
@@ -979,6 +1026,7 @@ async def vod_page(
                     "current_sort": sort,
                     "loading": True,
                     "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
+                    "lang": lang,
                 },
             )
 
@@ -988,7 +1036,7 @@ async def vod_page(
     # Check if user has access to any movies
     content_access = _get_content_access(username)
     if not content_access["movies"]:
-        raise HTTPException(403, "Access to movies is restricted")
+        raise HTTPException(403, _t("Access to movies is restricted"))
 
     # Get user's unavailable groups for filtering
     user_limits = auth.get_user_limits(username)
@@ -1035,6 +1083,7 @@ async def vod_page(
             "current_sort": sort,
             "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
             "content_access": _get_content_access(username),
+            "lang": lang,
         },
     )
 
@@ -1063,6 +1112,7 @@ def _start_series_background_load() -> None:
 async def series_page(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     category: int | None = None,
     sort: str | None = None,
 ):
@@ -1088,6 +1138,7 @@ async def series_page(
                     "current_sort": sort,
                     "loading": True,
                     "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
+                    "lang": lang,
                 },
             )
 
@@ -1097,7 +1148,7 @@ async def series_page(
     # Check if user has access to any series
     content_access = _get_content_access(username)
     if not content_access["series"]:
-        raise HTTPException(403, "Access to series is restricted")
+        raise HTTPException(403, _t("Access to series is restricted"))
 
     # Get user's unavailable groups for filtering
     user_limits = auth.get_user_limits(username)
@@ -1144,6 +1195,7 @@ async def series_page(
             "current_sort": sort,
             "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
             "content_access": _get_content_access(username),
+            "lang": lang,
         },
     )
 
@@ -1153,6 +1205,7 @@ async def series_detail_page(
     request: Request,
     series_id: int,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     refresh: bool = False,
 ):
     username = user.get("sub", "")
@@ -1169,14 +1222,14 @@ async def series_detail_page(
             user_limits = auth.get_user_limits(username)
             unavailable_groups = set(user_limits.get("unavailable_groups", []))
             if f"series:{source_id}" in unavailable_groups:
-                raise HTTPException(403, "Access to this series is restricted")
+                raise HTTPException(403, _t("Access to this series is restricted"))
 
     # Use the series' source, fall back to first Xtream source
     xtream = get_xtream_client_by_source(source_id) if source_id else None
     if not xtream:
         xtream = get_first_xtream_client()
     if not xtream:
-        raise HTTPException(404, "No Xtream source configured")
+        raise HTTPException(404, _t("No Xtream source configured"))
     cache_key = f"series_info_{source_id}_{series_id}" if source_id else f"series_info_{series_id}"
     try:
         series_data = await asyncio.to_thread(
@@ -1187,8 +1240,9 @@ async def series_detail_page(
             request,
             "error.html",
             {
-                "title": "Provider Error",
-                "message": f"Failed to load series info: {e}",
+                "title": _t("Provider Error"),
+                "message": f"{_t('Failed to load series info')}: {e}",
+                "lang": lang,
             },
             status_code=502,
         )
@@ -1243,6 +1297,7 @@ async def series_detail_page(
             "series": series_data,
             "series_id": series_id,
             "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
+            "lang": lang,
         },
     )
 
@@ -1252,6 +1307,7 @@ async def movie_detail_page(
     request: Request,
     stream_id: int,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
 ):
     username = user.get("sub", "")
 
@@ -1270,7 +1326,7 @@ async def movie_detail_page(
         user_limits = auth.get_user_limits(username)
         unavailable_groups = set(user_limits.get("unavailable_groups", []))
         if f"movies:{source_id}" in unavailable_groups:
-            raise HTTPException(403, "Access to this movie is restricted")
+            raise HTTPException(403, _t("Access to this movie is restricted"))
 
     # Fetch detailed movie info
     if movie:
@@ -1310,6 +1366,7 @@ async def movie_detail_page(
         {
             "movie": movie,
             "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
+            "lang": lang,
         },
     )
 
@@ -1510,6 +1567,7 @@ async def player_page(
     stream_type: str,
     stream_id: str,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     ext: str = "",
     series_id: int | None = None,
 ):
@@ -1525,10 +1583,10 @@ async def player_page(
             _get_series_player_info, stream_id, series_id, ext
         )
     else:
-        raise HTTPException(404, "Invalid stream type")
+        raise HTTPException(404, _t("Invalid stream type"))
 
     if not info.url:
-        raise HTTPException(404, "Stream not found")
+        raise HTTPException(404, _t("Stream not found"))
 
     # Check user's group access
     user_limits = auth.get_user_limits(username)
@@ -1544,16 +1602,16 @@ async def player_page(
         if stream_type == "live" and info.category_ids:
             # Live streams: blocked if any category is unavailable
             if any(f"cat:{cat_id}" in unavailable_groups for cat_id in info.category_ids):
-                raise HTTPException(403, "Access to this channel is restricted")
+                raise HTTPException(403, _t("Access to this channel is restricted"))
         elif stream_type == "movie" and info.source_id:
             if f"movies:{info.source_id}" in unavailable_groups:
-                raise HTTPException(403, "Access to movies is restricted")
+                raise HTTPException(403, _t("Access to movies is restricted"))
         elif (
             stream_type == "series"
             and info.source_id
             and f"series:{info.source_id}" in unavailable_groups
         ):
-            raise HTTPException(403, "Access to series is restricted")
+            raise HTTPException(403, _t("Access to series is restricted"))
 
     log.info("Play %s/%s: %s", stream_type, stream_id, info.url)
 
@@ -1604,6 +1662,7 @@ async def player_page(
             "deinterlace_fallback": info.deinterlace_fallback,
             "source_id": info.source_id,
             "content_access": _get_content_access(username),
+            "lang": lang,
         },
     )
 
@@ -1612,6 +1671,7 @@ async def player_page(
 async def search_page(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     q: str = "",
     regex: bool = False,
     live: bool = False,
@@ -1629,7 +1689,7 @@ async def search_page(
         if regex:
             # Limit regex length to prevent ReDoS
             if len(q) > 100:
-                raise HTTPException(400, "Regex pattern too long")
+                raise HTTPException(400, _t("Regex pattern too long"))
             try:
                 pattern = re.compile(q, re.IGNORECASE)
 
@@ -1749,6 +1809,7 @@ async def search_page(
             "limit": limit,
             "favorites": user_settings.get("favorites", {"series": {}, "movies": {}}),
             "content_access": content_access,
+            "lang": lang,
         },
     )
 
@@ -2052,7 +2113,11 @@ TEMPLATES.env.globals["get_content_access_from_request"] = _get_content_access_f
 
 
 @app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request, user: Annotated[dict, Depends(require_auth)]):
+async def settings_page(
+    request: Request,
+    user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
+):
     username = user.get("sub", "")
     is_admin = auth.is_admin(username)
     server_settings = load_server_settings()
@@ -2141,7 +2206,10 @@ async def settings_page(request: Request, user: Annotated[dict, Depends(require_
             "cc_lang": user_settings.get("cc_lang", ""),
             "cc_style": user_settings.get("cc_style", {}),
             "cast_host": user_settings.get("cast_host", ""),
+            "language": user_settings.get("language", ""),
+            "default_language": server_settings.get("default_language", i18n.DEFAULT_LANG),
             "content_access": _get_content_access(username),
+            "lang": lang,
         },
     )
 
@@ -2150,12 +2218,13 @@ async def settings_page(request: Request, user: Annotated[dict, Depends(require_
 async def settings_guide_filter(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
 ):
     username = user.get("sub", "")
     data = await request.json()
     cats = data.get("cats", [])
     if not isinstance(cats, list) or len(cats) > _MAX_FILTER_CATEGORIES:
-        raise HTTPException(400, "Invalid filter list")
+        raise HTTPException(400, _t("Invalid filter list"))
     user_settings = load_user_settings(username)
     user_settings["guide_filter"] = cats
     save_user_settings(username, user_settings)
@@ -2166,12 +2235,13 @@ async def settings_guide_filter(
 async def settings_vod_filter(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
 ):
     username = user.get("sub", "")
     data = await request.json()
     cats = data.get("cats", [])
     if not isinstance(cats, list) or len(cats) > _MAX_FILTER_CATEGORIES:
-        raise HTTPException(400, "Invalid filter list")
+        raise HTTPException(400, _t("Invalid filter list"))
     user_settings = load_user_settings(username)
     user_settings["vod_filter"] = cats
     save_user_settings(username, user_settings)
@@ -2182,12 +2252,13 @@ async def settings_vod_filter(
 async def settings_series_filter(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
 ):
     username = user.get("sub", "")
     data = await request.json()
     cats = data.get("cats", [])
     if not isinstance(cats, list) or len(cats) > _MAX_FILTER_CATEGORIES:
-        raise HTTPException(400, "Invalid filter list")
+        raise HTTPException(400, _t("Invalid filter list"))
     user_settings = load_user_settings(username)
     user_settings["series_filter"] = cats
     save_user_settings(username, user_settings)
@@ -2197,6 +2268,7 @@ async def settings_series_filter(
 @app.post("/settings/add")
 async def settings_add_source(
     _user: Annotated[dict, Depends(require_admin)],
+    lang: Annotated[str, Depends(resolve_locale)],
     name: Annotated[str, Form()],
     source_type: Annotated[str, Form()],
     url: Annotated[str, Form()],
@@ -2210,14 +2282,14 @@ async def settings_add_source(
 ):
     # Validate inputs
     if not name or not name.strip():
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, _t("Name is required"))
     if source_type not in ("xtream", "m3u", "epg"):
-        raise HTTPException(400, "Invalid source type")
+        raise HTTPException(400, _t("Invalid source type"))
     parsed_url = urllib.parse.urlparse(url)
     if parsed_url.scheme not in ("http", "https"):
-        raise HTTPException(400, "URL must use http or https")
+        raise HTTPException(400, _t("URL must use http or https"))
     if len(name) > 200:
-        raise HTTPException(400, "Name too long")
+        raise HTTPException(400, _t("Name too long"))
 
     # Parse schedule times
     schedule_list = []
@@ -2254,6 +2326,7 @@ async def settings_add_source(
 async def settings_edit_source(
     source_id: str,
     _user: Annotated[dict, Depends(require_admin)],
+    lang: Annotated[str, Depends(resolve_locale)],
     name: Annotated[str, Form()],
     source_type: Annotated[str, Form()],
     url: Annotated[str, Form()],
@@ -2268,14 +2341,14 @@ async def settings_edit_source(
 ):
     # Validate inputs
     if not name or not name.strip():
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, _t("Name is required"))
     if source_type not in ("xtream", "m3u", "epg"):
-        raise HTTPException(400, "Invalid source type")
+        raise HTTPException(400, _t("Invalid source type"))
     parsed_url = urllib.parse.urlparse(url)
     if parsed_url.scheme not in ("http", "https"):
-        raise HTTPException(400, "URL must use http or https")
+        raise HTTPException(400, _t("URL must use http or https"))
     if len(name) > 200:
-        raise HTTPException(400, "Name too long")
+        raise HTTPException(400, _t("Name too long"))
 
     # Parse schedule times (comma-separated HH:MM)
     schedule_list = []
@@ -2562,19 +2635,35 @@ async def get_user_prefs(user: Annotated[dict, Depends(require_auth)]):
         "cc_style": settings.get("cc_style", {}),
         "cast_host": settings.get("cast_host", ""),
         "virtual_scroll": settings.get("virtual_scroll", True),
+        "language": settings.get("language", ""),
     }
+
+
+@app.get("/api/i18n.js")
+async def api_i18n_js(request: Request):
+    """Serve the translation catalog for the active language as a JS file."""
+    lang = await resolve_locale(request)
+    strings = i18n.load_catalog(lang)
+    body = (
+        "window.I18N = {"
+        f"strings: {json.dumps(strings, ensure_ascii=False)},"
+        "t: function(k) { return this.strings[k] !== undefined ? this.strings[k] : k; }"
+        "};\n"
+    )
+    return Response(content=body, media_type="application/javascript")
 
 
 @app.post("/api/user-prefs")
 async def save_user_prefs(
     request: Request,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
 ):
     """Save user preferences (partial update)."""
     username = user.get("sub", "")
     body = await request.body()
     if len(body) > 64 * 1024:  # 64KB limit
-        raise HTTPException(400, "Request too large")
+        raise HTTPException(400, _t("Request too large"))
     data = json.loads(body)
     settings = load_user_settings(username)
     for key in (
@@ -2584,6 +2673,7 @@ async def save_user_prefs(
         "cast_host",
         "virtual_scroll",
         "guide_selected_cats",
+        "language",
     ):
         if key in data:
             settings[key] = data[key]
@@ -2804,6 +2894,7 @@ async def update_settings_api(
         "probe_series",
         "vod_order",
         "series_order",
+        "default_language",
     }
     settings = load_server_settings()
     for key in allowed_keys:
@@ -2847,28 +2938,30 @@ async def get_watch_position_api(
 async def settings_delete_user(
     username: str,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     password: Annotated[str, Form()] = "",
 ):
     """Delete a user. Self-deletion requires password. Other users require admin."""
     current_user = user.get("sub", "")
     if username == current_user:
         if not password or not auth.verify_password(username, password):
-            raise HTTPException(400, "Password required to delete your own account")
+            raise HTTPException(400, _t("Password required to delete your own account"))
         auth.delete_user(username)
         response = RedirectResponse("/login", status_code=303)
         response.delete_cookie("token")
         return response
     # Deleting other users requires admin
     if not auth.is_admin(current_user):
-        raise HTTPException(403, "Admin access required")
+        raise HTTPException(403, _t("Admin access required"))
     if not auth.delete_user(username):
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, _t("User not found"))
     return RedirectResponse("/settings", status_code=303)
 
 
 @app.post("/settings/users/add")
 async def settings_add_user(
     _user: Annotated[dict, Depends(require_admin)],
+    lang: Annotated[str, Depends(resolve_locale)],
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
     admin: Annotated[str, Form()] = "",
@@ -2878,11 +2971,11 @@ async def settings_add_user(
     """Add a new user."""
     username = username.strip()
     if not username or len(username) < 2:
-        raise HTTPException(400, "Username must be at least 2 characters")
+        raise HTTPException(400, _t("Username must be at least 2 characters"))
     if len(password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters")
+        raise HTTPException(400, _t("Password must be at least 8 characters"))
     if username in auth.get_all_usernames():
-        raise HTTPException(400, "User already exists")
+        raise HTTPException(400, _t("User already exists"))
     auth.create_user(username, password, admin=admin == "on")
     # Apply limits if provided
     parsed_max_streams = None
@@ -2901,17 +2994,18 @@ async def settings_add_user(
 @app.post("/settings/users/password")
 async def settings_change_own_password(
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     current_password: Annotated[str, Form()],
     new_password: Annotated[str, Form()],
 ):
     """Change own password. Requires current password verification."""
     username = user.get("sub", "")
     if not auth.verify_password(username, current_password):
-        raise HTTPException(400, "Current password is incorrect")
+        raise HTTPException(400, _t("Current password is incorrect"))
     if len(new_password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters")
+        raise HTTPException(400, _t("Password must be at least 8 characters"))
     if not auth.change_password(username, new_password):
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, _t("User not found"))
     return {"status": "ok"}
 
 
@@ -2919,16 +3013,17 @@ async def settings_change_own_password(
 async def settings_change_password(
     target_user: str,
     user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
     new_password: Annotated[str, Form()],
 ):
     """Change a user's password. Own password or admin required."""
     current_user = user.get("sub", "")
     if target_user != current_user and not auth.is_admin(current_user):
-        raise HTTPException(403, "Admin access required")
+        raise HTTPException(403, _t("Admin access required"))
     if len(new_password) < 8:
-        raise HTTPException(400, "Password must be at least 8 characters")
+        raise HTTPException(400, _t("Password must be at least 8 characters"))
     if not auth.change_password(target_user, new_password):
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, _t("User not found"))
     return {"status": "ok"}
 
 
@@ -2936,11 +3031,12 @@ async def settings_change_password(
 async def settings_set_admin(
     target_user: str,
     _user: Annotated[dict, Depends(require_admin)],
+    lang: Annotated[str, Depends(resolve_locale)],
     admin: Annotated[str, Form()] = "",
 ):
     """Set admin status for a user."""
     if not auth.set_admin(target_user, admin == "on"):
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, _t("User not found"))
     return {"status": "ok"}
 
 
@@ -2948,6 +3044,7 @@ async def settings_set_admin(
 async def settings_set_user_limits(
     target_user: str,
     _user: Annotated[dict, Depends(require_admin)],
+    lang: Annotated[str, Depends(resolve_locale)],
     max_streams_per_source: Annotated[str | None, Form()] = None,  # JSON object string
     unavailable_groups: Annotated[str | None, Form()] = None,  # JSON array string
 ):
@@ -2957,21 +3054,21 @@ async def settings_set_user_limits(
         try:
             parsed_max_streams = json.loads(max_streams_per_source)
             if not isinstance(parsed_max_streams, dict):
-                raise HTTPException(400, "max_streams_per_source must be a JSON object")
+                raise HTTPException(400, _t("max_streams_per_source must be a JSON object"))
         except json.JSONDecodeError as err:
-            raise HTTPException(400, "Invalid JSON for max_streams_per_source") from err
+            raise HTTPException(400, _t("Invalid JSON for max_streams_per_source")) from err
 
     parsed_unavailable = None
     if unavailable_groups is not None:
         try:
             parsed_unavailable = json.loads(unavailable_groups)
             if not isinstance(parsed_unavailable, list):
-                raise HTTPException(400, "unavailable_groups must be a JSON array")
+                raise HTTPException(400, _t("unavailable_groups must be a JSON array"))
         except json.JSONDecodeError as err:
-            raise HTTPException(400, "Invalid JSON for unavailable_groups") from err
+            raise HTTPException(400, _t("Invalid JSON for unavailable_groups")) from err
 
     if not auth.set_user_limits(target_user, parsed_max_streams, parsed_unavailable):
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, _t("User not found"))
     return {"status": "ok"}
 
 

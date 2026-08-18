@@ -25,3 +25,7 @@ cache/
 **/*.m3u
 **/*.xml
 tools/.zap2xml/
+
+# Translation catalogs are source files (keep tracked despite **/*.json)
+!translations/
+!translations/*.json

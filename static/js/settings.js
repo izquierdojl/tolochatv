@@ -161,11 +161,11 @@
         window.location.href = '/login';
       } else {
         const data = await resp.json();
-        if (msgEl) msgEl.textContent = data.detail || 'Failed';
+        if (msgEl) msgEl.textContent = data.detail || I18N.t('Failed');
       }
     } catch (e) {
       console.error('Delete self failed:', e);
-      if (msgEl) msgEl.textContent = 'Request failed';
+      if (msgEl) msgEl.textContent = I18N.t('Request failed');
     }
   };
 
@@ -229,16 +229,16 @@
     document.querySelectorAll('.delete-source-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const sourceId = btn.dataset.sourceId;
-        if (!confirm('Delete this source?')) return;
+        if (!confirm(I18N.t('Delete this source?'))) return;
         btn.disabled = true;
-        btn.textContent = 'Deleting...';
+        btn.textContent = I18N.t('Deleting...');
         try {
           const resp = await fetch(`/settings/delete/${sourceId}`, { method: 'POST' });
           if (resp.ok) location.reload();
           else throw new Error('Delete failed');
         } catch {
           btn.disabled = false;
-          btn.textContent = 'Delete';
+          btn.textContent = I18N.t('Delete');
         }
       });
     });
@@ -373,10 +373,10 @@
       const orig = el.textContent;
       try {
         await navigator.clipboard.writeText(text);
-        el.textContent = 'Copied!';
+        el.textContent = I18N.t('Copied!');
       } catch (e) {
         console.error('Copy failed:', e);
-        el.textContent = 'Failed';
+        el.textContent = I18N.t('Failed');
       }
       setTimeout(() => el.textContent = orig, 1500);
     });
@@ -515,7 +515,7 @@
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         refreshBtn.disabled = true;
-        refreshBtn.textContent = 'Detecting...';
+        refreshBtn.textContent = I18N.t('Detecting...');
         try {
           const resp = await fetch('/settings/refresh-encoders', { method: 'POST' });
           if (resp.ok) {
@@ -538,15 +538,15 @@
                 label.classList.toggle('opacity-40', !enabled);
               }
             });
-            refreshBtn.textContent = 'Done!';
+            refreshBtn.textContent = I18N.t('Done!');
           } else {
-            refreshBtn.textContent = 'Failed';
+            refreshBtn.textContent = I18N.t('Failed');
           }
         } catch (e) {
           console.error('Refresh encoders failed:', e);
-          refreshBtn.textContent = 'Failed';
+          refreshBtn.textContent = I18N.t('Failed');
         }
-        setTimeout(() => { refreshBtn.textContent = 'Re-detect Hardware'; refreshBtn.disabled = false; }, 1500);
+        setTimeout(() => { refreshBtn.textContent = I18N.t('Re-detect Hardware'); refreshBtn.disabled = false; }, 1500);
       });
     }
   }
@@ -585,10 +585,10 @@
 
     clearBtn.addEventListener('click', async () => {
       clearBtn.disabled = true;
-      clearBtn.textContent = 'Deleting...';
+      clearBtn.textContent = I18N.t('Deleting...');
       const resp = await saveWithFeedback('/settings/data-cache/clear', { method: 'POST' }, clearBtn);
-      clearBtn.textContent = resp?.ok ? 'Deleted!' : 'Failed';
-      setTimeout(() => { clearBtn.textContent = 'Delete'; clearBtn.disabled = false; }, 2000);
+      clearBtn.textContent = resp?.ok ? I18N.t('Deleted!') : I18N.t('Failed');
+      setTimeout(() => { clearBtn.textContent = I18N.t('Delete'); clearBtn.disabled = false; }, 2000);
     });
   }
 
@@ -610,14 +610,14 @@
         .then(data => {
           const series = data.series || [];
           if (series.length === 0) {
-            listEl.innerHTML = '<div class="text-gray-500 text-sm">No cached probes</div>';
+            listEl.innerHTML = `<div class="text-gray-500 text-sm">${I18N.t('No cached probes')}</div>`;
             return;
           }
           listEl.innerHTML = series.map(s => {
-            const name = escapeHtml(s.name) || `Series ${s.series_id}`;
+            const name = escapeHtml(s.name) || `${I18N.t('Series')} ${s.series_id}`;
             const episodes = s.episodes || [];
             const mruEp = s.mru != null ? episodes.find(ep => ep.episode_id === s.mru) : null;
-            const mruName = mruEp ? escapeHtml(mruEp.name) || `Episode ${s.mru}` : (s.mru != null ? `Episode ${s.mru}` : null);
+            const mruName = mruEp ? escapeHtml(mruEp.name) || `${I18N.t('Episode')} ${s.mru}` : (s.mru != null ? `${I18N.t('Episode')} ${s.mru}` : null);
             return `
               <details class="bg-gray-700 rounded group">
                 <summary class="flex items-center justify-between p-2 cursor-pointer hover:bg-gray-600 rounded text-sm">
@@ -627,7 +627,7 @@
                     <span class="text-gray-500 ml-2">${escapeHtml(s.video_codec || '')}/${escapeHtml(s.audio_codec || '')}</span>
                     ${s.subtitle_count > 0 ? `<span class="text-gray-500 ml-1">+${s.subtitle_count} subs</span>` : ''}
                   </div>
-                  <button class="clear-series px-2 py-1 text-xs bg-gray-600 hover:bg-red-600 rounded ml-2" data-series="${s.series_id}">Clear</button>
+                  <button class="clear-series px-2 py-1 text-xs bg-gray-600 hover:bg-red-600 rounded ml-2" data-series="${s.series_id}">${I18N.t('Clear')}</button>
                 </summary>
                 <div class="p-2 pt-0 border-t border-gray-600 max-h-48 overflow-y-auto">
                   ${mruName ? `
@@ -638,7 +638,7 @@
                   ` : ''}
                   ${episodes.map(ep => `
                     <div class="flex items-center justify-between py-1 text-xs text-gray-400">
-                      <span class="truncate mr-2">${escapeHtml(ep.name) || 'Episode ' + ep.episode_id}${ep.duration ? ` (${formatDuration(ep.duration)})` : ''}${ep.subtitle_count ? ` +${ep.subtitle_count} subs` : ''}</span>
+                      <span class="truncate mr-2">${escapeHtml(ep.name) || `${I18N.t('Episode')} ` + ep.episode_id}${ep.duration ? ` (${formatDuration(ep.duration)})` : ''}${ep.subtitle_count ? ` +${ep.subtitle_count} subs` : ''}</span>
                       <button class="clear-episode flex-shrink-0 px-1.5 py-0.5 bg-gray-600 hover:bg-red-600 rounded" data-series="${s.series_id}" data-episode="${ep.episode_id}">×</button>
                     </div>
                   `).join('')}
@@ -648,7 +648,7 @@
           }).join('');
         })
         .catch(() => {
-          listEl.innerHTML = '<div class="text-red-400 text-sm">Failed to load</div>';
+          listEl.innerHTML = `<div class="text-red-400 text-sm">${I18N.t('Failed to load')}</div>`;
         });
     }
 
@@ -780,16 +780,16 @@
         try {
           const resp = await fetch('/settings/users/add', { method: 'POST', body: form });
           if (resp.ok) {
-            if (msgEl) { msgEl.textContent = 'Added'; msgEl.className = 'text-sm text-green-400'; }
+            if (msgEl) { msgEl.textContent = I18N.t('Added'); msgEl.className = 'text-sm text-green-400'; }
             this.reset();
             setTimeout(() => location.reload(), 500);
           } else {
             const data = await resp.json();
-            if (msgEl) { msgEl.textContent = data.detail || 'Failed'; msgEl.className = 'text-sm text-red-400'; }
+            if (msgEl) { msgEl.textContent = data.detail || I18N.t('Failed'); msgEl.className = 'text-sm text-red-400'; }
           }
         } catch (e) {
           console.error('Add user failed:', e);
-          if (msgEl) { msgEl.textContent = 'Request failed'; msgEl.className = 'text-sm text-red-400'; }
+          if (msgEl) { msgEl.textContent = I18N.t('Request failed'); msgEl.className = 'text-sm text-red-400'; }
         }
         msgEl?.classList.remove('hidden');
         setTimeout(() => { if (msgEl) msgEl.className = 'text-sm hidden'; }, 3000);
@@ -912,6 +912,36 @@
   }
 
   // ============================================================
+  // Language Settings
+  // ============================================================
+
+  function setupLanguageSettings() {
+    const langSelect = document.getElementById('language-select');
+    if (langSelect) {
+      langSelect.addEventListener('change', async function() {
+        await saveWithFeedback(
+          '/api/user-prefs',
+          { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({language: this.value}) },
+          this
+        );
+        location.reload();
+      });
+    }
+
+    const defaultLangSelect = document.getElementById('default-language-select');
+    if (defaultLangSelect) {
+      defaultLangSelect.addEventListener('change', async function() {
+        const resp = await saveWithFeedback(
+          '/api/settings',
+          { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({default_language: this.value}) },
+          this
+        );
+        if (resp?.ok) location.reload();
+      });
+    }
+  }
+
+  // ============================================================
   // Init
   // ============================================================
 
@@ -930,6 +960,7 @@
     setupProbeCache();
     setupRefreshButtons();
     setupUserForms();
+    setupLanguageSettings();
   }
 
   init();
