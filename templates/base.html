@@ -49,6 +49,9 @@
           <path d="M17.5 0.5 A 6 6 0 0 1 17.5 7.5" stroke-width="1"/>
         </svg>
       </a>
+      <button type="button" id="channels-tree-btn" class="nav-link p-1.5 rounded hover:bg-gray-700" tabindex="0" title="{{ _('Channels') }}">
+        <svg class="w-6 h-6" fill="white" viewBox="0 0 24 24"><path d="M3 14h4v-4H3v4zm0 5h4v-4H3v4zM3 9h4V5H3v4zm5 5h13v-4H8v4zm0 5h13v-4H8v4zM8 5v4h13V5H8z"/></svg>
+      </button>
       {% set access = content_access if content_access is defined else get_content_access_from_request(request) %}
       {% if access.movies %}
       <a href="/vod" class="nav-link p-1.5 rounded hover:bg-gray-700 {% if request.url.path.startswith('/vod') %}active{% endif %}" tabindex="0" title="{{ _('Movies') }}">
@@ -82,6 +85,18 @@
         </a>
       </div>
     </nav>
+
+    <!-- Channels tree panel (fixed sidebar column) -->
+    <div id="channels-panel" class="hidden w-[300px] flex-shrink-0 overflow-y-auto bg-gray-800 border-r border-gray-600">
+      <div class="p-2 border-b border-gray-700 text-sm font-semibold flex items-center justify-between gap-2">
+        <span class="truncate">{{ _('Channels') }}</span>
+        <span class="flex items-center gap-2 flex-shrink-0">
+          <span id="channels-count" class="text-xs text-gray-500 font-normal"></span>
+          <button type="button" id="channels-toggle-all" class="text-xs text-blue-400 hover:text-blue-300 font-normal focus:outline-none" tabindex="0">{{ _('Expand all') }}</button>
+        </span>
+      </div>
+      <div id="channels-tree" class="p-1"></div>
+    </div>
 
     <!-- Main content -->
     <main class="flex-1 overflow-x-hidden overflow-y-auto p-2 min-w-0">

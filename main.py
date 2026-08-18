@@ -839,6 +839,59 @@ def _get_guide_streams(cats: str, username: str) -> tuple[list[dict], list[str],
     return streams, ordered_cats, selected_cats
 
 
+def _build_channels_tree(username: str) -> list[dict]:
+    """Build the grouped channel tree for the sidebar.
+
+    Groups always sort alphabetically by name (case-insensitive); the
+    guide_filter decides which groups are shown when set, otherwise all live
+    categories are used. Per-user unavailable groups are excluded and a stream
+    appears under each visible group it belongs to. Icons are wrapped through
+    the logo proxy.
+    """
+    categories = get_cache().get("live_categories", [])
+    all_streams = get_cache().get("live_streams", [])
+    user_settings = load_user_settings(username)
+    guide_filter = [str(c) for c in user_settings.get("guide_filter", [])]
+    unavailable_groups = set(auth.get_user_limits(username).get("unavailable_groups", []))
+
+    cat_by_id = {str(c["category_id"]): c for c in categories}
+    if guide_filter:
+        ordered = [(cid, cat_by_id[cid]) for cid in guide_filter if cid in cat_by_id]
+    else:
+        ordered = [(str(c["category_id"]), c) for c in categories]
+    # Alphabetical by name (case-insensitive), tie-broken by category id
+    ordered.sort(key=lambda item: (item[1].get("category_name", "").lower(), item[0]))
+
+    # Pre-index streams by category for efficiency (a stream may belong to several)
+    streams_by_cat: dict[str, list[dict]] = {}
+    for s in all_streams:
+        for c in (s.get("category_ids") or []):
+            streams_by_cat.setdefault(str(c), []).append(s)
+
+    tree: list[dict] = []
+    for cid, cat in ordered:
+        if f"cat:{cid}" in unavailable_groups:
+            continue
+        channels = [
+            {
+                "stream_id": s["stream_id"],
+                "name": s["name"],
+                "icon": _logo_url_filter(s.get("stream_icon", "")),
+            }
+            for s in streams_by_cat.get(cid, [])
+        ]
+        if not channels:
+            continue
+        tree.append(
+            {
+                "category_id": cid,
+                "category_name": cat["category_name"],
+                "channels": channels,
+            }
+        )
+    return tree
+
+
 def _build_guide_rows(
     streams: list[dict],
     start_idx: int,
@@ -974,6 +1027,24 @@ async def guide_rows_api(
         {"rows": rows, "total": total_count, "start": start},
         headers={"Cache-Control": "no-store"},
     )
+
+
+@app.get("/api/channels/tree")
+async def channels_tree_api(user: Annotated[dict, Depends(require_auth)]):
+    """API endpoint for the sidebar channel tree (groups -> channels)."""
+    username = user.get("sub", "")
+
+    if "live_streams" not in get_cache():
+        cached = await asyncio.to_thread(load_file_cache, "live_data")
+        if cached:
+            data, _ = cached
+            with get_cache_lock():
+                get_cache()["live_categories"] = data["cats"]
+                get_cache()["live_streams"] = data["streams"]
+                get_cache()["epg_urls"] = parse_epg_urls(data.get("epg_urls", []))
+
+    groups = _build_channels_tree(username)
+    return JSONResponse({"groups": groups}, headers={"Cache-Control": "no-store"})
 
 
 def _start_vod_background_load() -> None:
