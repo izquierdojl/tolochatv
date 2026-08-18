@@ -506,6 +506,7 @@ def load_server_settings() -> dict[str, Any]:
     data.setdefault("users", {})
     data.setdefault("user_agent_preset", "tivimate")
     data.setdefault("user_agent_custom", "")
+    data.setdefault("default_language", "es-ES")
     return data
 
 
@@ -541,6 +542,7 @@ def load_user_settings(username: str) -> dict[str, Any]:
     data.setdefault("cc_lang", "")
     data.setdefault("cc_style", {})
     data.setdefault("cast_host", "")
+    data.setdefault("language", "")
     return data
 
 

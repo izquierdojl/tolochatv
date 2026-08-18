@@ -89,7 +89,7 @@ class TestSetup:
     def test_setup_page_shown_when_no_users(self, client):
         resp = client.get("/setup", follow_redirects=False)
         assert resp.status_code == 200
-        assert b"setup" in resp.content.lower() or b"Create" in resp.content
+        assert b"setup" in resp.content.lower() or b"Crear" in resp.content
 
     def test_setup_redirects_when_users_exist(self, client, tmp_path):
         import auth
@@ -119,7 +119,7 @@ class TestSetup:
             data={"username": "ab", "password": "password123", "confirm": "password123"},
         )
         assert resp.status_code == 200
-        assert b"at least 3" in resp.content
+        assert b"al menos 3" in resp.content
 
     def test_setup_validates_password_length(self, client):
         resp = client.post(
@@ -127,7 +127,7 @@ class TestSetup:
             data={"username": "admin", "password": "short", "confirm": "short"},
         )
         assert resp.status_code == 200
-        assert b"at least 8" in resp.content
+        assert b"al menos 8" in resp.content
 
     def test_setup_validates_password_match(self, client):
         resp = client.post(
@@ -135,7 +135,7 @@ class TestSetup:
             data={"username": "admin", "password": "password123", "confirm": "different"},
         )
         assert resp.status_code == 200
-        assert b"do not match" in resp.content
+        assert b"no coinciden" in resp.content
 
 
 class TestLogin:
@@ -254,8 +254,8 @@ class TestGuide:
         with patch("main.load_file_cache", return_value=None):
             resp = auth_client.get("/guide")
             assert resp.status_code == 200
-            # Should show loading state
-            assert b"loading" in resp.content.lower() or b"Loading" in resp.content
+            # Should show loading state (translated)
+            assert b"Cargando" in resp.content
 
     def test_guide_shows_channels_from_cache(self, auth_client):
         cache_module.get_cache()["live_categories"] = [
@@ -530,6 +530,7 @@ class TestUserPrefs:
         data = resp.json()
         assert "favorites" in data
         assert "cc_lang" in data
+        assert "language" in data
 
     def test_save_user_prefs(self, auth_client):
         resp = auth_client.post(
@@ -538,6 +539,85 @@ class TestUserPrefs:
         )
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
+
+    def test_save_user_language_pref(self, auth_client):
+        resp = auth_client.post(
+            "/api/user-prefs",
+            json={"language": "en"},
+        )
+        assert resp.status_code == 200
+        data = auth_client.get("/api/user-prefs").json()
+        assert data["language"] == "en"
+
+    def test_language_pref_changes_page_locale(self, auth_client):
+        auth_client.post(
+            "/api/user-prefs",
+            json={"language": "en"},
+        )
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"}
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "CNN", "category_ids": ["1"], "epg_channel_id": ""}
+        ]
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/guide")
+            assert resp.status_code == 200
+            # English user sees English UI and lang attribute
+            assert b'lang="en"' in resp.content
+            assert b"Live TV" in resp.content
+
+    def test_settings_page_shows_language_selector(self, auth_client):
+        cache_module.get_cache()["live_categories"] = []
+        with patch("main.load_file_cache", return_value=None):
+            resp = auth_client.get("/settings")
+            assert resp.status_code == 200
+            assert b'id="language-select"' in resp.content
+            assert b'id="default-language-select"' in resp.content
+
+
+class TestI18nRoutes:
+    """Tests for the i18n catalog endpoint."""
+
+    def test_i18n_js_serves_spanish_catalog(self, auth_client):
+        resp = auth_client.get("/api/i18n.js")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/javascript"
+        assert b'"Ajustes"' in resp.content
+        assert b'window.I18N' in resp.content
+
+    def test_i18n_js_serves_english_identity(self, auth_client):
+        auth_client.post("/api/user-prefs", json={"language": "en"})
+        resp = auth_client.get("/api/i18n.js")
+        assert resp.status_code == 200
+        assert b"strings: {}" in resp.content
+
+    def test_login_error_translated_in_spanish(self, client, tmp_path):
+        import auth
+
+        auth.create_user("admin", "password123")
+        resp = client.get("/login", headers={"accept-language": "es-ES,es;q=0.9"})
+        assert resp.status_code == 200
+        # Page renders in Spanish by default (Accept-Language not needed for page lang)
+        assert b'lang="es-ES"' in resp.content
+
+    def test_access_error_translated(self, auth_client):
+        cache_module.get_cache()["vod_categories"] = []
+        cache_module.get_cache()["vod_streams"] = []
+        with patch("main._get_content_access", return_value={"movies": False, "series": True}):
+            resp = auth_client.get("/vod")
+            assert resp.status_code == 403
+            assert b"restricted" not in resp.content
+            assert "restringido" in resp.json()["detail"]
+
+    def test_access_error_html_page_translated(self, auth_client):
+        cache_module.get_cache()["vod_categories"] = []
+        cache_module.get_cache()["vod_streams"] = []
+        with patch("main._get_content_access", return_value={"movies": False, "series": True}):
+            resp = auth_client.get("/vod", headers={"accept": "text/html"})
+            assert resp.status_code == 403
+            assert b"restringido" in resp.content
+            assert b'lang="es-ES"' in resp.content
 
 
 class TestWatchPosition:

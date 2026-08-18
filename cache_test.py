@@ -114,6 +114,15 @@ class TestSettings:
         assert loaded["sources"] == [{"id": "s1", "name": "Test"}]
         assert loaded["custom"] is True
 
+    def test_load_settings_default_language_default(self, cache_module):
+        settings = cache_module.load_server_settings()
+        assert settings["default_language"] == "es-ES"
+
+    def test_load_settings_preserves_default_language(self, cache_module):
+        cache_module.save_server_settings({"default_language": "en"})
+        loaded = cache_module.load_server_settings()
+        assert loaded["default_language"] == "en"
+
 
 class TestUserSettings:
     def test_load_user_settings_defaults(self, cache_module):
@@ -121,6 +130,7 @@ class TestUserSettings:
         assert settings["guide_filter"] == []
         assert settings["captions_enabled"] is True
         assert settings["watch_history"] == {}
+        assert settings["language"] == ""
 
     def test_save_and_load_user_settings(self, cache_module):
         settings = {"guide_filter": ["cat1", "cat2"], "captions_enabled": False}
@@ -128,6 +138,11 @@ class TestUserSettings:
         loaded = cache_module.load_user_settings("testuser")
         assert loaded["guide_filter"] == ["cat1", "cat2"]
         assert loaded["captions_enabled"] is False
+
+    def test_load_user_settings_preserves_language(self, cache_module):
+        cache_module.save_user_settings("testuser", {"language": "en"})
+        loaded = cache_module.load_user_settings("testuser")
+        assert loaded["language"] == "en"
 
     def test_watch_position_save_and_get(self, cache_module):
         cache_module.save_watch_position("user1", "http://video.url", 120.5, 3600.0)

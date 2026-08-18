@@ -1282,7 +1282,7 @@
       this.blur();
       settingsMenu.classList.remove('open');
       if (!window.cast || !cast.framework) {
-        alert('Cast not available.\n\nTry accessing via your LAN IP instead of 0.0.0.0');
+        alert(I18N.t('Cast not available.\n\nTry accessing via your LAN IP instead of 0.0.0.0'));
         return;
       }
       if (Date.now() - castDialogClosedAt < 1000) return;

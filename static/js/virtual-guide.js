@@ -515,7 +515,7 @@ class VirtualGuide {
     } else {
       programsDesktop = `
         <div class="absolute inset-1 flex items-center px-2 text-gray-500 text-sm">
-          No program info
+          ${I18N.t('No program info')}
         </div>
       `;
     }
@@ -536,7 +536,7 @@ class VirtualGuide {
     } else {
       programsMobile = `
         <div class="absolute inset-0.5 flex items-center px-1 text-gray-500 text-[10px]">
-          No info
+          ${I18N.t('No info')}
         </div>
       `;
     }
