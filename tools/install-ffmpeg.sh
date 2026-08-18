@@ -1298,9 +1298,14 @@ if [ "$ENABLE_TENSORRT" = "1" ]; then
         # FFmpeg 7.0 has single-line enum: {DNN_TF = 1, DNN_OV, DNN_TH}
         # FFmpeg 7.1+/snapshot has multi-line: DNN_TH = 1 << 2
         if grep -q "DNN_TH = 1 << 2" "$DNN_INTERFACE_H"; then
-            # Multi-line format (7.1+/snapshot)
-            sed -i '/DNN_TH = 1 << 2/s/$/,/' "$DNN_INTERFACE_H"
-            sed -i '/DNN_TH = 1 << 2,$/a\    DNN_TRT = 1 << 3' "$DNN_INTERFACE_H"
+            # Multi-line format (7.1+/snapshot).
+            # Note: DNN_TH may already have a trailing comma (upstream added
+            # DNN_ONNX = 1 << 3 after it), so only add the comma when missing.
+            # DNN_TRT uses 1 << 4 to avoid colliding with DNN_ONNX = 1 << 3.
+            # Trailing comma after DNN_TRT is always valid (C99+) and required
+            # when more enum entries follow.
+            sed -i 's/^\([[:space:]]*DNN_TH = 1 << 2\)$/\1,/' "$DNN_INTERFACE_H"
+            sed -i '/DNN_TH = 1 << 2,$/a\    DNN_TRT = 1 << 4,' "$DNN_INTERFACE_H"
         elif grep -q "DNN_TF = 1, DNN_OV, DNN_TH}" "$DNN_INTERFACE_H"; then
             # Single-line format (7.0)
             sed -i 's/DNN_TF = 1, DNN_OV, DNN_TH}/DNN_TF = 1, DNN_OV, DNN_TH, DNN_TRT}/' "$DNN_INTERFACE_H"
@@ -1400,8 +1405,16 @@ PTXRULES
         sed -i '/--enable-libtorch.*enable Torch/a\  --enable-libtensorrt     enable TensorRT as one DNN backend [no]' "$CONFIGURE"
         # Add to library list
         sed -i '/^    libtorch$/a\    libtensorrt' "$CONFIGURE"
-        # Add to dnn_deps_any
-        sed -i 's/dnn_deps_any="libtensorflow libopenvino libtorch"/dnn_deps_any="libtensorflow libopenvino libtorch libtensorrt"/' "$CONFIGURE"
+        # Add to dnn_deps_any so dnn filters auto-enable with --enable-libtensorrt.
+        # Upstream list changes over time (libonnxruntime was appended), so append
+        # libtensorrt instead of matching a fixed string.
+        if grep -q '^dnn_deps_any=' "$CONFIGURE" && ! grep -q '^dnn_deps_any=.*libtensorrt' "$CONFIGURE"; then
+            sed -i 's/^dnn_deps_any="\(.*\)"$/dnn_deps_any="\1 libtensorrt"/' "$CONFIGURE"
+        fi
+        # Verify the dnn_deps_any patch was applied
+        if ! verify_patch "$CONFIGURE" 'dnn_deps_any=".*libtensorrt"' "configure dnn_deps_any libtensorrt"; then
+            exit 1
+        fi
         # Add header check (after libtorch check)
         # TensorRT (libnvinfer) and CUDA (libcuda) are loaded via dlopen at runtime.
         # CUDA kernels are compiled to PTX and loaded via Driver API - no cudart dependency.
