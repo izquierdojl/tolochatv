@@ -11,6 +11,7 @@ on:
       - "pyproject.toml"
       - "templates/**"
       - "static/**"
+      - "translations/**"
       - "entrypoint.sh"
       - ".github/workflows/ci.yml"
   pull_request:

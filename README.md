@@ -162,9 +162,17 @@ docker compose up -d
 
 Open http://localhost:8000. To update: `docker compose pull && docker compose up -d`
 
-> **Note:** The prebuilt image `ghcr.io/izquierdojl/tolochatv` is not
-> published yet. Until it exists, build from source instead:
-> `docker compose build && docker compose up -d`.
+> **Note:** The prebuilt image `ghcr.io/izquierdojl/tolochatv` is published by
+> CI on every push to `main` (`latest` tag) and on release tags (`v*`), but the
+> GitHub Container Registry packages for this repository are **private** by
+> default. To pull them from another machine you must log in first:
+> `echo $GITHUB_TOKEN | docker login ghcr.io -u <user> --password-stdin` (or use
+> a Personal Access Token with `read:packages`).
+>
+> If you don't want to use the prebuilt image, build from source instead:
+> `docker compose build && docker compose up -d`. The `docker-compose.yml` in
+> this repo always builds from source with the local checkout, so make sure the
+> checkout is up to date (`git pull origin main`) before building.
 
 #### Optional: Nonfree (proprietary) FFMPEG optimized for Nvidia or AMD and/or Intel GPU
 

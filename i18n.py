@@ -12,6 +12,10 @@ from contextvars import ContextVar
 from pathlib import Path
 
 import json
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -48,8 +52,13 @@ def load_catalog(lang: str) -> dict[str, str]:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             catalog = {str(k): str(v) for k, v in data.items()}
-        except (OSError, json.JSONDecodeError):
-            catalog = {}
+        except FileNotFoundError:
+            log.warning(
+                "Translation catalog not found: %s (UI will fall back to English)",
+                path,
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("Failed to load translation catalog %s: %s", path, exc)
         _catalogs[lang] = catalog
     return _catalogs[lang]
 

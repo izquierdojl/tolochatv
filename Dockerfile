@@ -42,9 +42,11 @@ COPY pyproject.toml README.md ./
 COPY *.py ./
 COPY templates/ templates/
 COPY static/ static/
+COPY translations/ translations/
 
 # Verify critical files exist
 RUN test -f pyproject.toml || { echo "ERROR: pyproject.toml not found"; exit 1; }
+RUN test -f translations/es_ES.json || { echo "ERROR: translations/es_ES.json not found"; exit 1; }
 
 # Install Python dependencies
 # --ignore-installed: avoids "Cannot uninstall X, RECORD file not found" for apt packages
