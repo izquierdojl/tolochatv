@@ -431,6 +431,16 @@ class TestChannelsTree:
         assert b"channels-tree-btn" in resp.content
         assert b"channels-panel" in resp.content
 
+    def test_guide_static_js_assets_are_versioned(self, auth_client):
+        import main
+
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/guide")
+        assert resp.status_code == 200
+        assert (
+            f'/static/js/app.js?v={main.ASSET_VERSION}'.encode() in resp.content
+        )
+
     def test_channels_i18n_keys_served(self, auth_client):
         resp = auth_client.get("/api/i18n.js")
         assert resp.status_code == 200
