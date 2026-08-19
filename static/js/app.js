@@ -259,10 +259,14 @@
 
   const STORE_OPEN = 'tolochatv.channels.panelOpen';
   const STORE_EXPANDED = 'tolochatv.channels.expanded';
+  const STORE_SELECTED = 'tolochatv.channels.selected';
+  const STORE_SCROLL = 'tolochatv.channels.scroll';
 
   const expanded = new Map(); // category_id -> expanded bool
   let treeData = null;        // cached API response
   let panelOpen = false;
+  let selectedStreamId = null;
+  let treeRendered = false;   // whether the tree DOM is currently built
 
   function t(key) {
     if (typeof I18N !== 'undefined' && I18N.t) return I18N.t(key);
@@ -302,8 +306,53 @@
       if (raw === '0' || raw === '1') isOpen = raw === '1';
       const ids = JSON.parse(localStorage.getItem(STORE_EXPANDED) || '[]');
       if (Array.isArray(ids)) ids.forEach(id => expanded.set(String(id), true));
+      const saved = localStorage.getItem(STORE_SELECTED);
+      if (saved) selectedStreamId = String(saved);
     } catch (e) { /* storage unavailable */ }
     return isOpen;
+  }
+
+  function syncSelectionFromUrl() {
+    const m = location.pathname.match(/^\/play\/live\/(.+)$/);
+    if (!m) return;
+    try {
+      selectedStreamId = decodeURIComponent(m[1]);
+      localStorage.setItem(STORE_SELECTED, selectedStreamId);
+    } catch (e) { /* storage unavailable */ }
+  }
+
+  function revealSelectedGroup() {
+    if (!selectedStreamId || !treeData || !treeData.groups) return false;
+    const group = treeData.groups.find(g =>
+      (g.channels || []).some(ch => String(ch.stream_id) === selectedStreamId)
+    );
+    if (group && !expanded.get(group.category_id)) {
+      expanded.set(group.category_id, true);
+      saveExpanded();
+      return true;
+    }
+    return false;
+  }
+
+  function savePanelScroll() {
+    try { localStorage.setItem(STORE_SCROLL, String(panel.scrollTop)); } catch (e) { /* ignore */ }
+  }
+
+  function restorePanelScroll() {
+    try {
+      const saved = localStorage.getItem(STORE_SCROLL);
+      if (saved !== null) panel.scrollTop = parseInt(saved, 10) || 0;
+    } catch (e) { /* ignore */ }
+  }
+
+  function applySelectionHighlight() {
+    if (!treeEl) return;
+    treeEl.querySelectorAll('a[data-stream-id].channel-selected').forEach(el => {
+      el.classList.remove('channel-selected');
+    });
+    if (!selectedStreamId) return;
+    const el = treeEl.querySelector('a[data-stream-id="' + CSS.escape(selectedStreamId) + '"]');
+    if (el) el.classList.add('channel-selected');
   }
 
   function panelFocusables() {
@@ -355,7 +404,14 @@
         g.channels.forEach(ch => {
           const a = document.createElement('a');
           a.href = '/play/live/' + ch.stream_id;
-          a.className = 'flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700';
+          a.dataset.streamId = String(ch.stream_id);
+          a.className = 'flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700' +
+            (String(ch.stream_id) === selectedStreamId ? ' channel-selected' : '');
+          a.addEventListener('click', () => {
+            selectedStreamId = String(ch.stream_id);
+            try { localStorage.setItem(STORE_SELECTED, selectedStreamId); } catch (e) { /* ignore */ }
+            applySelectionHighlight();
+          });
           a.tabIndex = 0;
           const img = document.createElement('img');
           img.src = ch.icon || '';
@@ -396,7 +452,16 @@
         treeData = { groups: [] };
       }
     }
-    renderTree();
+    const revealedGroup = revealSelectedGroup();
+    if (!treeRendered || revealedGroup) {
+      renderTree();
+      treeRendered = true;
+      restorePanelScroll();
+    } else {
+      // Tree already mounted (e.g. reopened or restored from bfcache):
+      // only refresh the selection highlight, never rebuild the whole tree.
+      applySelectionHighlight();
+    }
     if (focusFirst) {
       const first = panelFocusables()[0];
       if (first) first.focus();
@@ -476,6 +541,21 @@
       items[next].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   }, true);
+
+  // Sync selection with the playing channel before restoring panel state
+  syncSelectionFromUrl();
+
+  // Persist the panel's scroll position so it is restored on return/reopen
+  panel.addEventListener('scroll', () => savePanelScroll(), { passive: true });
+
+  // On bfcache restore the DOM (and any stale highlight) comes back intact;
+  // re-apply the current selection highlight and scroll so it stays consistent.
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+      applySelectionHighlight();
+      restorePanelScroll();
+    }
+  });
 
   // Restore persisted state on page load (fixed panel defaults to open)
   if (loadState()) {
