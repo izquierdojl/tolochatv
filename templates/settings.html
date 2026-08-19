@@ -974,5 +974,5 @@ window.SETTINGS_CONFIG = {
   ccLang: {{ cc_lang | tojson | safe }}
 };
 </script>
-<script src="/static/js/settings.js"></script>
+<script src="/static/js/settings.js?v={{ asset_version }}"></script>
 {% endblock %}

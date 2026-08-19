@@ -107,5 +107,5 @@ window.FAVORITES_CONFIG = {
   isBrowseView: {{ (current_sort is not none) | tojson }}
 };
 </script>
-<script src="/static/js/favorites-grid.js"></script>
+<script src="/static/js/favorites-grid.js?v={{ asset_version }}"></script>
 {% endblock %}

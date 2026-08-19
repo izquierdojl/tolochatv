@@ -123,6 +123,11 @@ TEMPLATES = Jinja2Templates(directory=APP_DIR / "templates")
 TEMPLATES.env.auto_reload = True
 TEMPLATES.env.globals["_"] = i18n.t
 
+# Static asset cache-busting version. Increment when front-end files (static/
+# or templates/) change so clients don't serve stale cached JS/CSS.
+ASSET_VERSION = "2026-08-19-1"
+TEMPLATES.env.globals["asset_version"] = ASSET_VERSION
+
 _t = i18n.t
 
 # Super-resolution engine directory (TensorRT engines for different resolutions)
