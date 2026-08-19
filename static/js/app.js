@@ -252,19 +252,27 @@
   'use strict';
 
   const btn = document.getElementById('channels-tree-btn');
+  const favoritesBtn = document.getElementById('channels-favorites-btn');
   const panel = document.getElementById('channels-panel');
   const treeEl = document.getElementById('channels-tree');
+  const favoritesEl = document.getElementById('channels-favorites');
+  const favoritesListEl = document.getElementById('channels-favorites-list');
+  const favoritesEmptyEl = document.getElementById('channels-favorites-empty');
   const toggleAllBtn = document.getElementById('channels-toggle-all');
-  if (!btn || !panel || !treeEl) return;
+  if (!btn || !favoritesBtn || !panel || !treeEl || !favoritesEl || !favoritesListEl) return;
 
   const STORE_OPEN = 'tolochatv.channels.panelOpen';
   const STORE_EXPANDED = 'tolochatv.channels.expanded';
   const STORE_SELECTED = 'tolochatv.channels.selected';
   const STORE_SCROLL = 'tolochatv.channels.scroll';
+  const STORE_VIEW = 'tolochatv.channels.view';
 
   const expanded = new Map(); // category_id -> expanded bool
   let treeData = null;        // cached API response
+  let userPrefs = null;       // cached authenticated preferences
+  let liveFavorites = {};     // stream_id -> favorite metadata
   let panelOpen = false;
+  let panelView = 'tree';
   let selectedStreamId = null;
   let treeRendered = false;   // whether the tree DOM is currently built
 
@@ -277,6 +285,168 @@
     const div = document.createElement('div');
     div.textContent = value;
     return div.innerHTML;
+  }
+
+  function isFavorite(streamId) {
+    return Object.prototype.hasOwnProperty.call(liveFavorites, String(streamId));
+  }
+
+  async function loadUserPrefs() {
+    if (userPrefs !== null) return;
+    try {
+      const resp = await fetch('/api/user-prefs');
+      if (!resp.ok) throw new Error('Failed to load user preferences');
+      userPrefs = await resp.json();
+      const favorites = userPrefs.favorites || {};
+      liveFavorites = favorites.live && typeof favorites.live === 'object'
+        ? {...favorites.live} : {};
+    } catch (e) {
+      userPrefs = null;
+      liveFavorites = {};
+      console.error('Failed to load channel favorites:', e);
+    }
+  }
+
+  async function saveUserPrefs() {
+    let favorites = userPrefs && userPrefs.favorites;
+    if (!favorites) {
+      try {
+        const resp = await fetch('/api/user-prefs');
+        if (!resp.ok) throw new Error('Failed to refresh user preferences');
+        userPrefs = await resp.json();
+        favorites = userPrefs.favorites || {};
+      } catch (e) {
+        console.error('Failed to save channel favorites:', e);
+        return;
+      }
+    }
+
+    const updatedFavorites = {...favorites, live: liveFavorites};
+    userPrefs = {...userPrefs, favorites: updatedFavorites};
+    try {
+      const resp = await fetch('/api/user-prefs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({favorites: updatedFavorites})
+      });
+      if (!resp.ok) throw new Error('Failed to save user preferences');
+    } catch (e) {
+      console.error('Failed to save channel favorites:', e);
+    }
+  }
+
+  function visibleChannelsById() {
+    const channels = new Map();
+    if (!treeData || !treeData.groups) return channels;
+
+    treeData.groups.forEach(group => {
+      (group.channels || []).forEach(channel => {
+        const id = String(channel.stream_id);
+        const existing = channels.get(id);
+        if (existing) {
+          if (!existing.groups.includes(group.category_name)) {
+            existing.groups.push(group.category_name);
+          }
+          return;
+        }
+        channels.set(id, {
+          streamId: id,
+          name: channel.name,
+          groups: [group.category_name]
+        });
+      });
+    });
+    return channels;
+  }
+
+  function updateFavoriteControls() {
+    treeEl.querySelectorAll('.channel-favorite-btn').forEach(button => {
+      const id = button.dataset.streamId;
+      const marked = isFavorite(id);
+      button.textContent = marked ? '★' : '☆';
+      button.setAttribute('aria-pressed', String(marked));
+      button.setAttribute('aria-label', t(marked ? 'Remove channel from favorites' : 'Add channel to favorites'));
+      button.title = t(marked ? 'Remove channel from favorites' : 'Add channel to favorites');
+      button.classList.toggle('text-yellow-400', marked);
+    });
+  }
+
+  function renderFavorites() {
+    favoritesListEl.innerHTML = '';
+    const visibleChannels = visibleChannelsById();
+    const favorites = Object.keys(liveFavorites)
+      .map(id => visibleChannels.get(String(id)))
+      .filter(Boolean);
+
+    if (favoritesEmptyEl) favoritesEmptyEl.classList.toggle('hidden', favorites.length > 0);
+    if (!favorites.length) return;
+
+    favorites.forEach(channel => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-700 text-sm';
+
+      const link = document.createElement('a');
+      link.href = '/play/live/' + encodeURIComponent(channel.streamId);
+      link.className = 'flex-1 min-w-0 truncate focus:outline-none focus:ring-2 focus:ring-blue-500 rounded' +
+        (channel.streamId === selectedStreamId ? ' channel-selected' : '');
+      link.tabIndex = 0;
+      link.dataset.streamId = channel.streamId;
+      link.textContent = channel.name + ' (' + channel.groups.join(', ') + ')';
+      link.addEventListener('click', () => {
+        selectedStreamId = channel.streamId;
+        applySelectionHighlight();
+        try { localStorage.setItem(STORE_SELECTED, selectedStreamId); } catch (e) { /* ignore */ }
+      });
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'channel-favorite-btn flex-shrink-0 text-yellow-400 text-xl leading-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded';
+      remove.dataset.streamId = channel.streamId;
+      remove.textContent = '★';
+      remove.setAttribute('aria-pressed', 'true');
+      remove.setAttribute('aria-label', t('Remove channel from favorites'));
+      remove.title = t('Remove channel from favorites');
+      remove.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFavorite(channel.streamId, channel.name, channel.groups);
+      });
+
+      row.appendChild(link);
+      row.appendChild(remove);
+      favoritesListEl.appendChild(row);
+    });
+  }
+
+  function toggleFavorite(streamId, name, groups) {
+    const id = String(streamId);
+    if (isFavorite(id)) {
+      delete liveFavorites[id];
+    } else {
+      liveFavorites[id] = {name, groups};
+    }
+    updateFavoriteControls();
+    renderFavorites();
+    void saveUserPrefs();
+  }
+
+  function setPanelView(view, focusFirst = false) {
+    panelView = view;
+    try { localStorage.setItem(STORE_VIEW, panelView); } catch (e) { /* ignore */ }
+    const isTree = view === 'tree';
+    treeEl.classList.toggle('hidden', !isTree);
+    favoritesEl.classList.toggle('hidden', isTree);
+    if (toggleAllBtn) toggleAllBtn.classList.toggle('hidden', !isTree);
+    btn.classList.toggle('active', panelOpen && isTree);
+    favoritesBtn.classList.toggle('active', panelOpen && !isTree);
+    favoritesBtn.setAttribute('aria-pressed', String(panelOpen && !isTree));
+    favoritesBtn.setAttribute('aria-label', t(isTree ? 'Show favorite channels' : 'Show channel tree'));
+    if (!isTree) renderFavorites();
+
+    if (focusFirst) {
+      const first = panelFocusables()[0];
+      if (first) first.focus();
+    }
   }
 
   function saveExpanded() {
@@ -308,6 +478,8 @@
       if (Array.isArray(ids)) ids.forEach(id => expanded.set(String(id), true));
       const saved = localStorage.getItem(STORE_SELECTED);
       if (saved) selectedStreamId = String(saved);
+      const savedView = localStorage.getItem(STORE_VIEW);
+      if (savedView === 'tree' || savedView === 'favorites') panelView = savedView;
     } catch (e) { /* storage unavailable */ }
     return isOpen;
   }
@@ -350,9 +522,14 @@
     treeEl.querySelectorAll('a[data-stream-id].channel-selected').forEach(el => {
       el.classList.remove('channel-selected');
     });
+    favoritesListEl.querySelectorAll('a[data-stream-id].channel-selected').forEach(el => {
+      el.classList.remove('channel-selected');
+    });
     if (!selectedStreamId) return;
-    const el = treeEl.querySelector('a[data-stream-id="' + CSS.escape(selectedStreamId) + '"]');
-    if (el) el.classList.add('channel-selected');
+    const treeElSelected = treeEl.querySelector('a[data-stream-id="' + CSS.escape(selectedStreamId) + '"]');
+    if (treeElSelected) treeElSelected.classList.add('channel-selected');
+    const favoriteEl = favoritesListEl.querySelector('a[data-stream-id="' + CSS.escape(selectedStreamId) + '"]');
+    if (favoriteEl) favoriteEl.classList.add('channel-selected');
   }
 
   function panelFocusables() {
@@ -371,6 +548,7 @@
       treeEl.appendChild(empty);
       if (countEl) countEl.textContent = '';
       updateToggleLabel();
+      renderFavorites();
       return;
     }
 
@@ -402,10 +580,13 @@
         const list = document.createElement('div');
         list.className = 'pl-4';
         g.channels.forEach(ch => {
+          const row = document.createElement('div');
+          row.className = 'flex items-center gap-1';
+
           const a = document.createElement('a');
           a.href = '/play/live/' + ch.stream_id;
           a.dataset.streamId = String(ch.stream_id);
-          a.className = 'flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700' +
+          a.className = 'flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700 text-sm focus:outline-none focus:bg-gray-700 flex-1 min-w-0' +
             (String(ch.stream_id) === selectedStreamId ? ' channel-selected' : '');
           a.addEventListener('click', () => {
             selectedStreamId = String(ch.stream_id);
@@ -423,7 +604,21 @@
           name.textContent = ch.name;
           a.appendChild(img);
           a.appendChild(name);
-          list.appendChild(a);
+
+          const favorite = document.createElement('button');
+          favorite.type = 'button';
+          favorite.className = 'channel-favorite-btn flex-shrink-0 w-7 h-7 text-lg leading-none text-gray-400 hover:text-yellow-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded';
+          favorite.dataset.streamId = String(ch.stream_id);
+          favorite.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const visible = visibleChannelsById().get(String(ch.stream_id));
+            toggleFavorite(ch.stream_id, ch.name, visible ? visible.groups : []);
+          });
+
+          row.appendChild(a);
+          row.appendChild(favorite);
+          list.appendChild(row);
         });
         groupDiv.appendChild(list);
       }
@@ -433,25 +628,24 @@
 
     if (countEl) countEl.textContent = String(total);
     updateToggleLabel();
+    updateFavoriteControls();
+    renderFavorites();
     if (focusCat) {
       const target = treeEl.querySelector('button[data-cat="' + CSS.escape(focusCat) + '"]');
       if (target) target.focus();
     }
   }
 
-  async function showPanel(focusFirst) {
+  async function showPanel(focusFirst, view = panelView) {
     panelOpen = true;
-    btn.classList.add('active');
     panel.classList.remove('hidden');
     try { localStorage.setItem(STORE_OPEN, '1'); } catch (e) { /* ignore */ }
-    if (!treeData) {
-      try {
-        const resp = await fetch('/api/channels/tree');
-        treeData = resp.ok ? await resp.json() : { groups: [] };
-      } catch (e) {
-        treeData = { groups: [] };
-      }
-    }
+    setPanelView(view);
+    const treePromise = treeData ? Promise.resolve() : fetch('/api/channels/tree')
+      .then(resp => resp.ok ? resp.json() : {groups: []})
+      .catch(() => ({groups: []}))
+      .then(data => { treeData = data; });
+    await Promise.all([treePromise, loadUserPrefs()]);
     const revealedGroup = revealSelectedGroup();
     if (!treeRendered || revealedGroup) {
       renderTree();
@@ -461,7 +655,10 @@
       // Tree already mounted (e.g. reopened or restored from bfcache):
       // only refresh the selection highlight, never rebuild the whole tree.
       applySelectionHighlight();
+      updateFavoriteControls();
+      renderFavorites();
     }
+    setPanelView(view);
     if (focusFirst) {
       const first = panelFocusables()[0];
       if (first) first.focus();
@@ -471,6 +668,8 @@
   function hidePanel() {
     panelOpen = false;
     btn.classList.remove('active');
+    favoritesBtn.classList.remove('active');
+    favoritesBtn.setAttribute('aria-pressed', 'false');
     panel.classList.add('hidden');
     try { localStorage.setItem(STORE_OPEN, '0'); } catch (e) { /* ignore */ }
     btn.focus();
@@ -478,13 +677,23 @@
 
   btn.addEventListener('click', () => {
     if (panel.classList.contains('hidden')) {
-      showPanel(true);
+      showPanel(true, 'tree');
+    } else if (panelView !== 'tree') {
+      setPanelView('tree', true);
     } else {
       hidePanel();
     }
   });
 
-  toggleAllBtn.addEventListener('click', () => {
+  favoritesBtn.addEventListener('click', () => {
+    if (panel.classList.contains('hidden')) {
+      showPanel(true, 'favorites');
+    } else {
+      setPanelView('favorites', true);
+    }
+  });
+
+  if (toggleAllBtn) toggleAllBtn.addEventListener('click', () => {
     if (!treeData || !treeData.groups || treeData.groups.length === 0) return;
     if (allGroupsExpanded()) {
       expanded.clear();
