@@ -429,7 +429,9 @@ class TestChannelsTree:
             resp = auth_client.get("/guide")
         assert resp.status_code == 200
         assert b"channels-tree-btn" in resp.content
+        assert b"channels-favorites-btn" in resp.content
         assert b"channels-panel" in resp.content
+        assert b"channels-favorites" in resp.content
 
     def test_guide_static_js_assets_are_versioned(self, auth_client):
         import main
@@ -446,6 +448,7 @@ class TestChannelsTree:
         assert resp.status_code == 200
         assert '"Channels":"Canales"' in resp.text or '"Channels": "Canales"' in resp.text
         assert "No channels available" in resp.text
+        assert "No favorite channels" in resp.text
 
 
 class TestVod:
@@ -696,6 +699,42 @@ class TestUserPrefs:
         assert "favorites" in data
         assert "cc_lang" in data
         assert "language" in data
+        assert data["favorites"].get("live", {}) == {}
+
+    def test_user_prefs_requires_authentication(self, client):
+        get_resp = client.get("/api/user-prefs", follow_redirects=False)
+        post_resp = client.post(
+            "/api/user-prefs",
+            json={"favorites": {"live": {"1": {"name": "CNN", "groups": ["News"]}}}},
+            follow_redirects=False,
+        )
+        assert get_resp.status_code == 303
+        assert post_resp.status_code == 303
+
+    def test_save_live_favorites_preserves_other_favorites(self, auth_client):
+        favorites = {
+            "movies": {"10": {"name": "Movie"}},
+            "series": {"20": {"name": "Series"}},
+            "live": {"1": {"name": "CNN", "groups": ["News"]}},
+        }
+        resp = auth_client.post("/api/user-prefs", json={"favorites": favorites})
+        assert resp.status_code == 200
+
+        saved = auth_client.get("/api/user-prefs").json()["favorites"]
+        assert saved == favorites
+
+    def test_live_favorites_are_isolated_between_users(self, auth_client):
+        import auth
+
+        favorites = {"movies": {}, "series": {}, "live": {"1": {"name": "CNN"}}}
+        auth_client.post("/api/user-prefs", json={"favorites": favorites})
+
+        auth.create_user("otheruser", "otherpass123")
+        other_token = auth.create_token({"sub": "otheruser"})
+        auth_client.cookies.set("token", other_token)
+
+        other_favorites = auth_client.get("/api/user-prefs").json()["favorites"]
+        assert other_favorites.get("live", {}) == {}
 
     def test_save_user_prefs(self, auth_client):
         resp = auth_client.post(
