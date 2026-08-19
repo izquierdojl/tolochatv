@@ -16,6 +16,9 @@ uv.lock
 .cache/
 cache/
 
+# opencode
+.opencode/node_modules/
+
 # Certificates
 *.pem
 
