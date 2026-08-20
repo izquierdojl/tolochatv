@@ -287,6 +287,66 @@
     return div.innerHTML;
   }
 
+  function showToast(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    (container || document.body).appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  async function copyChannelLink(streamId) {
+    try {
+      const resp = await fetch('/api/channels/live-url?stream_id=' + encodeURIComponent(streamId));
+      if (!resp.ok) throw new Error('Failed to resolve URL');
+      const data = await resp.json();
+      const url = data.url;
+      await writeClipboard(url);
+      showToast(t('Copied!'));
+    } catch (e) {
+      showToast(t('Failed to copy channel link'));
+    }
+  }
+
+  function writeClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  function legacyCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+
+  function createCopyButton(streamId) {
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.className = 'channel-copy-btn flex-shrink-0 w-7 h-7 text-base leading-none text-gray-400 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded';
+    copy.dataset.streamId = String(streamId);
+    copy.textContent = '⧉';
+    copy.setAttribute('aria-label', t('Copy channel link'));
+    copy.title = t('Copy channel link');
+    copy.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      copyChannelLink(streamId);
+    });
+    return copy;
+  }
+
   function isFavorite(streamId) {
     return Object.prototype.hasOwnProperty.call(liveFavorites, String(streamId));
   }
@@ -413,6 +473,7 @@
       });
 
       row.appendChild(link);
+      row.appendChild(createCopyButton(channel.streamId));
       row.appendChild(remove);
       favoritesListEl.appendChild(row);
     });
@@ -616,9 +677,10 @@
             toggleFavorite(ch.stream_id, ch.name, visible ? visible.groups : []);
           });
 
-          row.appendChild(a);
-          row.appendChild(favorite);
-          list.appendChild(row);
+      row.appendChild(a);
+      row.appendChild(createCopyButton(ch.stream_id));
+      row.appendChild(favorite);
+      list.appendChild(row);
         });
         groupDiv.appendChild(list);
       }

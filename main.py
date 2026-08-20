@@ -1052,6 +1052,19 @@ async def channels_tree_api(user: Annotated[dict, Depends(require_auth)]):
     return JSONResponse({"groups": groups}, headers={"Cache-Control": "no-store"})
 
 
+@app.get("/api/channels/live-url")
+async def channels_live_url_api(
+    stream_id: str,
+    user: Annotated[dict, Depends(require_auth)],
+):
+    """Return the direct stream URL for a live channel by stream_id."""
+    _ensure_live_cache()
+    info = await asyncio.to_thread(_get_live_player_info, stream_id)
+    if not info.url:
+        raise HTTPException(404, _t("Stream not found"))
+    return JSONResponse({"url": info.url}, headers={"Cache-Control": "no-store"})
+
+
 def _start_vod_background_load() -> None:
     """Start background loading of VOD data if not already in progress."""
     if "vod_load" in get_refresh_in_progress():

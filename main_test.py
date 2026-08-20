@@ -417,6 +417,70 @@ class TestChannelsTree:
             assert resp.status_code == 200
             assert resp.json() == {"groups": []}
 
+    def test_channels_live_url_requires_auth(self, client):
+        resp = client.get("/api/channels/live-url?stream_id=1", follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/login"
+
+    def test_channels_live_url_xtream(self, auth_client):
+        cache_module.get_cache()["live_categories"] = []
+        cache_module.get_cache()["live_streams"] = [
+            {
+                "stream_id": 42,
+                "name": "CNN",
+                "source_type": "xtream",
+                "source_url": "http://example.com:8080",
+                "source_username": "user#1",
+                "source_password": "p@ss",
+                "category_ids": ["1"],
+            }
+        ]
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/api/channels/live-url?stream_id=42")
+        assert resp.status_code == 200
+        assert resp.json() == {"url": "http://example.com:8080/live/user%231/p%40ss/42.m3u8"}
+
+    def test_channels_live_url_xtream_prefixed_id(self, auth_client):
+        cache_module.get_cache()["live_categories"] = []
+        cache_module.get_cache()["live_streams"] = [
+            {
+                "stream_id": "src_7",
+                "name": "Sport",
+                "source_type": "xtream",
+                "source_url": "http://example.com:8080",
+                "source_username": "u",
+                "source_password": "p",
+                "category_ids": ["1"],
+            }
+        ]
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/api/channels/live-url?stream_id=src_7")
+        assert resp.status_code == 200
+        assert resp.json() == {"url": "http://example.com:8080/live/u/p/7.m3u8"}
+
+    def test_channels_live_url_direct_url_m3u(self, auth_client):
+        cache_module.get_cache()["live_categories"] = []
+        cache_module.get_cache()["live_streams"] = [
+            {
+                "stream_id": 5,
+                "name": "M3U Channel",
+                "direct_url": "http://example.com/stream.m3u8",
+                "source_type": "m3u",
+                "category_ids": ["1"],
+            }
+        ]
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/api/channels/live-url?stream_id=5")
+        assert resp.status_code == 200
+        assert resp.json() == {"url": "http://example.com/stream.m3u8"}
+
+    def test_channels_live_url_not_found(self, auth_client):
+        cache_module.get_cache()["live_categories"] = []
+        cache_module.get_cache()["live_streams"] = []
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/api/channels/live-url?stream_id=999")
+        assert resp.status_code == 404
+
     def test_guide_renders_channels_tree_button_and_panel(self, auth_client):
         cache_module.get_cache()["live_categories"] = [
             {"category_id": "1", "category_name": "News"}
