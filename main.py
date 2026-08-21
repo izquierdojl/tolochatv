@@ -743,6 +743,7 @@ async def guide_page(
     now = datetime.now(UTC)
     window_start = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=offset)
     window_end = window_start + timedelta(hours=3)
+    guide_time_options = _build_guide_time_options(now)
 
     # Virtual scrolling: only render first batch, JS fetches rest on scroll
     # When disabled, render all rows server-side
@@ -789,6 +790,7 @@ async def guide_page(
             "time_markers_mobile": time_markers_mobile,
             "offset": offset,
             "window_start": window_start.strftime("%Y-%m-%d %H:%M"),
+            "guide_time_options": guide_time_options,
             "epg_error": get_cache().get("epg_error"),
             "epg_loading": epg_loading,
             "channel_count": len(grid_data),
@@ -799,6 +801,28 @@ async def guide_page(
             "lang": lang,
         },
     )
+
+
+def _build_guide_time_options(now: datetime) -> list[dict[str, Any]]:
+    """Group EPG-backed guide hours by their local calendar date."""
+    try:
+        slots = epg.get_guide_time_slots()
+    except RuntimeError:
+        return []
+
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    grouped: dict[str, dict[str, Any]] = {}
+    for slot in slots:
+        offset = int((slot - current_hour).total_seconds() / 3600)
+        local_slot = slot.astimezone()
+        date_key = local_slot.strftime("%Y-%m-%d")
+        day = grouped.setdefault(
+            date_key,
+            {"label": local_slot.strftime("%d/%m/%Y"), "hours": []},
+        )
+        day["hours"].append({"offset": offset, "label": local_slot.strftime("%H:%M")})
+
+    return list(grouped.values())
 
 
 def _get_guide_streams(cats: str, username: str) -> tuple[list[dict], list[str], set[str]]:
@@ -992,7 +1016,7 @@ async def guide_rows_api(
     user: Annotated[dict, Depends(require_auth)],
     start: int = Query(default=0, ge=0, description="Starting row index"),
     count: int = Query(default=130, ge=1, le=500, description="Number of rows to fetch"),
-    offset: int = Query(default=0, ge=-168, le=168, description="Hours offset from now"),
+    offset: int = Query(default=0, ge=-8784, le=8784, description="Hours offset from now"),
     cats: str = "",
 ):
     """API endpoint for virtual scrolling - returns guide rows as JSON."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -274,6 +275,28 @@ class TestGuide:
         with patch("main.epg.has_programs", return_value=True):
             resp = auth_client.get("/guide?cats=1")
             assert resp.status_code == 200
+
+    def test_guide_time_picker_only_contains_epg_hours(self, auth_client):
+        cache_module.get_cache()["live_categories"] = [
+            {"category_id": "1", "category_name": "News"}
+        ]
+        cache_module.get_cache()["live_streams"] = [
+            {"stream_id": 1, "name": "CNN", "category_ids": ["1"], "epg_channel_id": ""}
+        ]
+        current_hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+        available_slots = [current_hour, current_hour + timedelta(hours=2)]
+
+        with (
+            patch("main.epg.has_programs", return_value=True),
+            patch("main.epg.get_guide_time_slots", return_value=available_slots),
+        ):
+            resp = auth_client.get("/guide?cats=1")
+
+        assert resp.status_code == 200
+        assert b"guide-time-picker" in resp.content
+        assert b'value="0" selected' in resp.content
+        assert b'value="2"' in resp.content
+        assert b'value="1"' not in resp.content
 
     def test_guide_uses_saved_filter(self, auth_client, tmp_path):
         user_dir = tmp_path / "users" / "testuser"

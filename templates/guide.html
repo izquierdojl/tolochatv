@@ -101,6 +101,27 @@
       <span class="text-xs text-gray-500">({{ total_count | default(channel_count) }} {{ _('ch') }})</span>
       <a href="/settings#filters" class="text-xs text-gray-500 hover:text-blue-400">{{ _('[edit]') }}</a>
       {% endif %}
+      {% if guide_time_options %}
+      <div class="relative guide-time-picker">
+        <button type="button" class="tolocha-control w-8 h-8 rounded inline-flex items-center justify-center"
+                title="{{ _('Select date and time') }}" aria-label="{{ _('Select date and time') }}">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 2v3m8-3v3M4 9h16M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm7 8v3l2 1"/>
+          </svg>
+        </button>
+        <div class="guide-time-menu tolocha-surface hidden absolute right-0 top-full mt-2 p-2 rounded shadow-lg z-30 min-w-[150px]">
+          <select class="guide-time-select tolocha-control w-full text-sm rounded" aria-label="{{ _('Select date and time') }}">
+            {% for day in guide_time_options %}
+            <optgroup label="{{ day.label }}">
+              {% for hour in day.hours %}
+              <option value="{{ hour.offset }}"{% if hour.offset == offset %} selected{% endif %}>{{ hour.label }}</option>
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endif %}
     </div>
     <div class="flex gap-1">
       <a href="/guide?offset={{ offset - 3 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"
@@ -191,6 +212,27 @@
       <a href="/guide?offset={{ offset + 2 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"
          class="px-1 py-0.5 text-[10px] bg-gray-700 rounded focusable" tabindex="0">▶</a>
     </div>
+    {% if guide_time_options %}
+    <div class="relative guide-time-picker">
+      <button type="button" class="tolocha-control w-7 h-7 rounded inline-flex items-center justify-center"
+              title="{{ _('Select date and time') }}" aria-label="{{ _('Select date and time') }}">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 2v3m8-3v3M4 9h16M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm7 8v3l2 1"/>
+        </svg>
+      </button>
+      <div class="guide-time-menu tolocha-surface hidden absolute right-0 top-full mt-1 p-1.5 rounded shadow-lg z-30 min-w-[140px]">
+        <select class="guide-time-select tolocha-control w-full text-xs rounded" aria-label="{{ _('Select date and time') }}">
+          {% for day in guide_time_options %}
+          <optgroup label="{{ day.label }}">
+            {% for hour in day.hours %}
+            <option value="{{ hour.offset }}"{% if hour.offset == offset %} selected{% endif %}>{{ hour.label }}</option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   {% if grid_data %}
@@ -362,6 +404,29 @@ const GUIDE_CONFIG = {
 
   setupDropdown('category-dropdown-btn', 'category-dropdown-menu', applyDesktopFilter);
   setupDropdown('category-dropdown-btn-mobile', 'category-dropdown-menu-mobile', applyMobileFilter);
+})();
+
+(function() {
+  const catsParam = {{ cats_param | tojson }};
+  document.querySelectorAll('.guide-time-picker').forEach((picker) => {
+    const button = picker.querySelector('button');
+    const menu = picker.querySelector('.guide-time-menu');
+    const select = picker.querySelector('.guide-time-select');
+    if (!button || !menu || !select) return;
+
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      menu.classList.toggle('hidden');
+    });
+    select.addEventListener('change', () => {
+      const params = new URLSearchParams({offset: select.value});
+      if (catsParam) params.set('cats', catsParam);
+      window.location.href = '/guide?' + params.toString();
+    });
+    document.addEventListener('click', (event) => {
+      if (!picker.contains(event.target)) menu.classList.add('hidden');
+    });
+  });
 })();
 
 // Auto-refresh when EPG finishes loading

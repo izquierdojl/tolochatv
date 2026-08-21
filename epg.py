@@ -318,6 +318,26 @@ def get_channel_count() -> int:
     return row[0] if row else 0
 
 
+def get_guide_time_slots() -> list[datetime]:
+    """Return UTC hour starts that overlap at least one EPG programme."""
+    conn = _get_conn()
+    rows = conn.execute("SELECT start_ts, stop_ts FROM programs ORDER BY start_ts").fetchall()
+    slots: set[datetime] = set()
+
+    for row in rows:
+        start = datetime.fromtimestamp(row["start_ts"], tz=UTC)
+        stop = datetime.fromtimestamp(row["stop_ts"], tz=UTC)
+        if stop <= start:
+            continue
+        slot = start.replace(minute=0, second=0, microsecond=0)
+        while slot < stop:
+            if slot + timedelta(hours=1) > start:
+                slots.add(slot)
+            slot += timedelta(hours=1)
+
+    return sorted(slots)
+
+
 def prune_old_programs(before: datetime) -> int:
     """Delete programs that ended before the given time. Returns count deleted."""
     conn = _get_conn()

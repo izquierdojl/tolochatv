@@ -236,6 +236,23 @@ class TestPrograms:
 
         assert db.get_channel_count() == 2
 
+    def test_get_guide_time_slots_returns_overlapping_hours(self, db):
+        start = datetime(2026, 8, 22, 10, 15, tzinfo=UTC)
+        db.insert_programs(
+            [
+                ("ch1", "Show 1", start.timestamp(), (start + timedelta(hours=2)).timestamp(), "", "src1"),
+                ("ch1", "Show 2", (start + timedelta(hours=4, minutes=10)).timestamp(), (start + timedelta(hours=4, minutes=20)).timestamp(), "", "src1"),
+            ]
+        )
+        db.commit()
+
+        assert db.get_guide_time_slots() == [
+            datetime(2026, 8, 22, 10, tzinfo=UTC),
+            datetime(2026, 8, 22, 11, tzinfo=UTC),
+            datetime(2026, 8, 22, 12, tzinfo=UTC),
+            datetime(2026, 8, 22, 14, tzinfo=UTC),
+        ]
+
 
 class TestClear:
     """Tests for clear operations."""
