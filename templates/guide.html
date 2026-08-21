@@ -37,15 +37,15 @@
 
 /* EPG cell focus */
 .desktop-only-block a[data-nav="epg"]:focus {
-  outline: 3px solid #3b82f6;
+  outline: 3px solid var(--tc-focus);
   outline-offset: -1px;
-  background: rgba(59, 130, 246, 0.3);
+  background: rgb(111 129 80 / 0.3);
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="guide-container flex flex-col h-full min-w-0">
+<div class="guide-container tolocha-page flex flex-col h-full min-w-0">
   <!-- Desktop header (fixed, non-scrolling) -->
   <div class="desktop-only flex items-center justify-between gap-2 mb-4 h-10">
     <div class="min-w-0 flex items-center gap-2 flex-shrink-0">
@@ -54,20 +54,20 @@
       <!-- Category filter multi-select dropdown -->
       <div class="inline-block" id="category-dropdown">
         <button type="button" id="category-dropdown-btn"
-                class="bg-gray-700 text-sm rounded px-2 py-1 border border-gray-600 hover:border-gray-500 focus:border-blue-500 focus:outline-none inline-flex items-center gap-1">
+                class="tolocha-control text-sm rounded px-2 py-1 inline-flex items-center gap-1">
           <span>{% if effective_cats.split(',') | length < ordered_filter_cats | length %}{{ effective_cats.split(',') | length }} {{ _('selected') }}{% else %}{{ _('All categories') }}{% endif %}</span>
           <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
       </div>
       <!-- Dropdown menu (portal, positioned via JS) -->
-      <div id="category-dropdown-menu" class="hidden fixed top-0 left-0 bg-gray-800 border border-gray-600 rounded shadow-lg z-[9999] min-w-[200px] max-h-[300px] overflow-y-auto">
+      <div id="category-dropdown-menu" class="tolocha-surface hidden fixed top-0 left-0 rounded shadow-lg z-[9999] min-w-[200px] max-h-[300px] overflow-y-auto">
         <div class="p-2 border-b border-gray-700 flex gap-2">
           <button type="button" onclick="document.querySelectorAll('#category-dropdown-menu .cat-checkbox').forEach(c=>c.checked=true)" class="text-xs text-blue-400 hover:text-blue-300">{{ _('All') }}</button>
           <button type="button" onclick="document.querySelectorAll('#category-dropdown-menu .cat-checkbox').forEach(c=>c.checked=false)" class="text-xs text-blue-400 hover:text-blue-300">{{ _('None') }}</button>
         </div>
         {% for cat in ordered_filter_cats %}
         <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700 cursor-pointer text-sm">
-          <input type="checkbox" class="cat-checkbox rounded bg-gray-600 border-gray-500 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+          <input type="checkbox" class="cat-checkbox tolocha-control rounded focus:ring-blue-500 focus:ring-offset-0"
                  value="{{ cat.category_id }}"
                  {% if cat.category_id|string in effective_cats.split(',') %}checked{% endif %}>
           <span class="truncate">{{ cat.category_name }}</span>
@@ -108,7 +108,7 @@
         &larr; {{ _('Earlier') }}
       </a>
       <a href="/guide?offset=0{% if cats_param %}&cats={{ cats_param }}{% endif %}"
-         class="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded focusable" tabindex="0">
+          class="tolocha-primary px-2 py-1 text-xs rounded focusable" tabindex="0">
         {{ _('Now') }}
       </a>
       <a href="/guide?offset={{ offset + 3 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"
@@ -119,11 +119,11 @@
   </div>
 
   {% if loading_message %}
-  <div class="bg-blue-900/50 border border-blue-500 rounded p-2 sm:p-4 mb-2 sm:mb-4">
+  <div class="tolocha-alert-info bg-blue-900/50 border border-blue-500 rounded p-2 sm:p-4 mb-2 sm:mb-4">
     <p class="text-blue-300 text-sm sm:text-base">{{ loading_message }}</p>
   </div>
   {% elif epg_error %}
-  <div class="bg-red-900/50 border border-red-500 rounded p-2 sm:p-4 mb-2 sm:mb-4">
+  <div class="tolocha-alert-danger bg-red-900/50 border border-red-500 rounded p-2 sm:p-4 mb-2 sm:mb-4">
     <p class="text-red-300 text-sm sm:text-base">{{ _('EPG Error:') }} {{ epg_error }}</p>
     <p class="text-xs sm:text-sm text-gray-400 mt-1">{{ _('Showing channels without program info') }}</p>
   </div>
@@ -137,20 +137,20 @@
       <!-- Mobile category filter multi-select -->
       <div class="inline-block" id="category-dropdown-mobile">
         <button type="button" id="category-dropdown-btn-mobile"
-                class="bg-gray-700 text-[10px] rounded px-1 py-0.5 border border-gray-600 inline-flex items-center gap-0.5 max-w-[100px]">
+                class="tolocha-control text-[10px] rounded px-1 py-0.5 inline-flex items-center gap-0.5 max-w-[100px]">
           <span class="truncate">{% if effective_cats.split(',') | length < ordered_filter_cats | length %}{{ effective_cats.split(',') | length }} {{ _('sel') }}{% else %}{{ _('All') }}{% endif %}</span>
           <svg class="w-2 h-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
       </div>
       <!-- Mobile dropdown menu (portal) -->
-      <div id="category-dropdown-menu-mobile" class="hidden fixed top-0 left-0 bg-gray-800 border border-gray-600 rounded shadow-lg z-[9999] min-w-[160px] max-h-[250px] overflow-y-auto">
+      <div id="category-dropdown-menu-mobile" class="tolocha-surface hidden fixed top-0 left-0 rounded shadow-lg z-[9999] min-w-[160px] max-h-[250px] overflow-y-auto">
         <div class="p-1.5 border-b border-gray-700 flex gap-2">
           <button type="button" onclick="document.querySelectorAll('#category-dropdown-menu-mobile .cat-checkbox-mobile').forEach(c=>c.checked=true)" class="text-[10px] text-blue-400">{{ _('All') }}</button>
           <button type="button" onclick="document.querySelectorAll('#category-dropdown-menu-mobile .cat-checkbox-mobile').forEach(c=>c.checked=false)" class="text-[10px] text-blue-400">{{ _('None') }}</button>
         </div>
         {% for cat in ordered_filter_cats %}
         <label class="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-700 cursor-pointer text-[11px]">
-          <input type="checkbox" class="cat-checkbox-mobile rounded bg-gray-600 border-gray-500 text-blue-500 w-3 h-3"
+          <input type="checkbox" class="cat-checkbox-mobile tolocha-control rounded w-3 h-3"
                  value="{{ cat.category_id }}"
                  {% if cat.category_id|string in effective_cats.split(',') %}checked{% endif %}>
           <span class="truncate">{{ cat.category_name }}</span>
@@ -187,7 +187,7 @@
       <a href="/guide?offset={{ offset - 2 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"
          class="px-1 py-0.5 text-[10px] bg-gray-700 rounded focusable" tabindex="0">◀</a>
       <a href="/guide?offset=0{% if cats_param %}&cats={{ cats_param }}{% endif %}"
-         class="px-1 py-0.5 text-[10px] bg-blue-600 rounded focusable" tabindex="0">{{ _('Now') }}</a>
+         class="tolocha-primary px-1 py-0.5 text-[10px] rounded focusable" tabindex="0">{{ _('Now') }}</a>
       <a href="/guide?offset={{ offset + 2 }}{% if cats_param %}&cats={{ cats_param }}{% endif %}"
          class="px-1 py-0.5 text-[10px] bg-gray-700 rounded focusable" tabindex="0">▶</a>
     </div>
@@ -195,7 +195,7 @@
 
   {% if grid_data %}
   <!-- EPG Grid (scrollable) -->
-  <div class="flex-1 overflow-y-auto overflow-x-hidden bg-gray-800 rounded-lg">
+  <div class="tolocha-surface flex-1 overflow-y-auto overflow-x-hidden rounded-lg">
     <!-- Mobile Time Header -->
     <div class="compact-only sticky top-0 z-20 bg-gray-900 border-b border-gray-700">
       <div class="w-32 flex-shrink-0 p-1 bg-gray-900"></div>

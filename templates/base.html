@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}TolochaTV{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/tolocha-theme.css?v={{ asset_version }}">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
   <script>
@@ -61,10 +62,10 @@
   </style>
   {% block head_extra %}{% endblock %}
 </head>
-<body class="h-full bg-gray-900 text-gray-100 overflow-hidden">
-  <div class="flex h-full min-w-0">
+<body class="h-full bg-gray-900 text-gray-100 overflow-hidden tolocha-shell">
+  <div class="flex h-full min-w-0 tolocha-layout">
     <!-- Sidebar -->
-    <nav class="bg-gray-800 flex flex-col py-4 items-center gap-4 w-10 flex-shrink-0">
+    <nav class="bg-gray-800 flex flex-col py-4 items-center gap-4 w-10 flex-shrink-0 tolocha-rail">
       <a href="/guide" class="nav-link p-1.5 rounded hover:bg-gray-700 {% if request.url.path == '/guide' %}active{% endif %}" tabindex="0" title="{{ _('Live TV') }}">
         <svg class="w-6 h-6" fill="none" stroke="white" viewBox="0 0 24 24" stroke-linecap="round">
           <!-- Tower legs -->
@@ -143,7 +144,7 @@
     </div>
 
     <!-- Main content -->
-    <main class="flex-1 overflow-x-hidden overflow-y-auto p-2 min-w-0">
+    <main class="flex-1 overflow-x-hidden overflow-y-auto p-2 min-w-0 tolocha-main">
       {% block content %}{% endblock %}
     </main>
   </div>

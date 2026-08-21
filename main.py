@@ -125,7 +125,7 @@ TEMPLATES.env.globals["_"] = i18n.t
 
 # Static asset cache-busting version. Increment when front-end files (static/
 # or templates/) change so clients don't serve stale cached JS/CSS.
-ASSET_VERSION = "2026-08-19-1"
+ASSET_VERSION = "2026-08-21-1"
 TEMPLATES.env.globals["asset_version"] = ASSET_VERSION
 
 _t = i18n.t

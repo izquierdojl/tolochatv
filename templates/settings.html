@@ -4,20 +4,20 @@
 {% block head_extra %}
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
-.refresh-btn.active { background-color: rgb(37, 99, 235); pointer-events: none; }
+.refresh-btn.active { background-color: var(--tc-moss); pointer-events: none; }
 .refresh-btn .spinner { display: none; width: 0.75em; height: 0.75em; border: 2px solid white; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 0.25em; }
 .refresh-btn.active .spinner { display: inline-block; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-2xl">
+<div class="tolocha-page max-w-2xl">
   <h2 class="text-3xl font-bold mb-6">{{ _('Settings') }}</h2>
 
   <h3 class="text-lg text-gray-400 mb-3">{{ _('Client Settings') }}</h3>
 
   <!-- Language -->
-  <div id="language" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="language" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Language') }}</h3>
     <label class="flex items-center gap-3 cursor-pointer">
       <select id="language-select" class="px-3 py-1.5 bg-gray-700 rounded text-sm">
@@ -28,7 +28,7 @@
   </div>
 
   <!-- Live TV Category Filter -->
-  <div id="filters" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="filters" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Live TV Filter') }}</h3>
     <p class="text-sm text-gray-400 mb-3">{{ _('Select and order which channel categories appear in the Live TV guide') }}</p>
     <div class="grid grid-cols-2 gap-2 mb-2">
@@ -64,7 +64,7 @@
   </div>
 
   <!-- Movies Category Filter -->
-  <div id="vod-filters" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="vod-filters" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Movies Filter') }}</h3>
     <p class="text-sm text-gray-400 mb-3">{{ _('Select which movie categories appear on the Movies page') }}</p>
     <div class="grid grid-cols-2 gap-2 mb-2">
@@ -100,7 +100,7 @@
   </div>
 
   <!-- Series Category Filter -->
-  <div id="series-filters" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="series-filters" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Series Filter') }}</h3>
     <p class="text-sm text-gray-400 mb-3">{{ _('Select which series categories appear on the Series page') }}</p>
     <div class="grid grid-cols-2 gap-2 mb-2">
@@ -136,7 +136,7 @@
   </div>
 
   <!-- Guide settings -->
-  <div id="guide-settings" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="guide-settings" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Guide') }}</h3>
     <div class="mb-4">
       <label class="flex items-center gap-3 cursor-pointer">
@@ -149,7 +149,7 @@
   </div>
 
   <!-- Closed Captions settings -->
-  <div id="captions" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="captions" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Closed Captions') }}</h3>
     <div class="mb-4">
       <label class="flex items-center gap-3 cursor-pointer">
@@ -248,7 +248,7 @@
   {% endif %}
 
   <!-- Users management -->
-  <div id="users" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="users" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{% if is_admin %}{{ _('Users') }}{% else %}{{ _('Account') }}{% endif %}</h3>
     <div class="space-y-2">
       {% for u in all_users %}
@@ -426,7 +426,7 @@
           </div>
           <div class="flex justify-end items-center gap-3">
             <span id="add-user-msg" class="text-sm hidden"></span>
-            <button type="submit" class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded">{{ _('Add User') }}</button>
+            <button type="submit" class="tolocha-primary px-3 py-1.5 text-sm rounded">{{ _('Add User') }}</button>
           </div>
         </form>
       </div>
@@ -437,7 +437,7 @@
 
   {% if is_admin %}
   <!-- Default language -->
-  <div id="default-language" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="default-language" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Default Language') }}</h3>
     <p class="text-sm text-gray-400 mb-3">Idioma de la interfaz para usuarios sin preferencia ni detección por navegador</p>
     <label class="flex items-center gap-3 cursor-pointer">
@@ -449,7 +449,7 @@
   </div>
 
   <!-- Transcoding settings -->
-  <div id="transcoding" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="transcoding" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Transcoding') }}</h3>
     <div class="space-y-4" id="transcode-settings">
       <div>
@@ -630,7 +630,7 @@
   </div>
 
   <!-- User-Agent -->
-  <div id="user-agent" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="user-agent" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('User-Agent') }}</h3>
     <p class="text-sm text-gray-400 mb-4">{{ _('HTTP User-Agent header sent when fetching streams. Only affects transcoding; passthrough uses the client\'s native user-agent.') }}</p>
     <div class="space-y-4" id="user-agent-settings">
@@ -674,7 +674,7 @@
   </div>
 
   <!-- Data Cache -->
-  <div id="data-cache" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="data-cache" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Data Cache') }}</h3>
     <div class="mb-4">
       <label class="block text-sm font-medium mb-2">{{ _('Transcode Directory') }}</label>
@@ -690,7 +690,7 @@
   </div>
 
   <!-- Probe Cache -->
-  <div id="probe-cache" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="probe-cache" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Probe Cache') }}</h3>
     <div class="mb-4">
       <label class="block text-sm font-medium mb-2">{{ _('Probe Media (detect codecs/subs)') }}</label>
@@ -723,7 +723,7 @@
   </div>
 
   <!-- Sources -->
-  <div id="sources" class="mb-8 p-4 bg-gray-800 rounded">
+  <div id="sources" class="tolocha-surface mb-8 p-4 rounded">
     <h3 class="text-xl font-semibold mb-4">{{ _('Sources') }}</h3>
     <div class="space-y-2">
       {% for source in sources %}
@@ -923,7 +923,7 @@
         </div>
       </div>
       <div class="flex justify-end">
-        <button type="submit" class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 rounded">{{ _('Add Source') }}</button>
+        <button type="submit" class="tolocha-primary px-3 py-1.5 text-sm rounded">{{ _('Add Source') }}</button>
       </div>
     </form>
       </div>
