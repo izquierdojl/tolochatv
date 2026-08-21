@@ -41,6 +41,7 @@ import signal
 import subprocess
 import threading
 import time
+import tomllib
 import urllib.error
 import urllib.parse
 
@@ -123,9 +124,33 @@ TEMPLATES = Jinja2Templates(directory=APP_DIR / "templates")
 TEMPLATES.env.auto_reload = True
 TEMPLATES.env.globals["_"] = i18n.t
 
+DEFAULT_PROJECT_VERSION = "0.1.0"
+DEFAULT_PROJECT_REPOSITORY = "https://github.com/izquierdojl/tolochatv"
+
+
+def _load_project_metadata() -> tuple[str, str]:
+    try:
+        project = tomllib.loads((APP_DIR / "pyproject.toml").read_text(encoding="utf-8")).get(
+            "project", {}
+        )
+    except (OSError, tomllib.TOMLDecodeError):
+        return DEFAULT_PROJECT_VERSION, DEFAULT_PROJECT_REPOSITORY
+
+    urls = project.get("urls", {})
+    if not isinstance(urls, dict):
+        urls = {}
+    return (
+        str(project.get("version", DEFAULT_PROJECT_VERSION)),
+        str(urls.get("Repository", DEFAULT_PROJECT_REPOSITORY)),
+    )
+
+
+PROJECT_VERSION, PROJECT_REPOSITORY = _load_project_metadata()
+PROJECT_TOOLS = ("Python", "FastAPI", "Jinja2", "SQLite", "FFmpeg", "HLS.js")
+
 # Static asset cache-busting version. Increment when front-end files (static/
 # or templates/) change so clients don't serve stale cached JS/CSS.
-ASSET_VERSION = "2026-08-21-1"
+ASSET_VERSION = "2026-08-22-1"
 TEMPLATES.env.globals["asset_version"] = ASSET_VERSION
 
 _t = i18n.t
@@ -2223,6 +2248,24 @@ def _get_content_access_from_request(request: Request) -> dict[str, bool]:
 
 
 TEMPLATES.env.globals["get_content_access_from_request"] = _get_content_access_from_request
+
+
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(
+    request: Request,
+    _user: Annotated[dict, Depends(require_auth)],
+    lang: Annotated[str, Depends(resolve_locale)],
+):
+    return TEMPLATES.TemplateResponse(
+        request,
+        "about.html",
+        {
+            "lang": lang,
+            "project_version": PROJECT_VERSION,
+            "project_repository": PROJECT_REPOSITORY,
+            "project_tools": PROJECT_TOOLS,
+        },
+    )
 
 
 @app.get("/settings", response_class=HTMLResponse)

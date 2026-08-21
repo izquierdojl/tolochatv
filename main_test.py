@@ -236,6 +236,15 @@ class TestAuthRequired:
         assert resp.status_code == 303
         assert resp.headers["location"] == "/login"
 
+    def test_about_redirects_to_login(self, client):
+        import auth
+
+        auth.create_user("admin", "password123")
+
+        resp = client.get("/about", follow_redirects=False)
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/login"
+
 
 class TestIndex:
     """Tests for index route."""
@@ -244,6 +253,38 @@ class TestIndex:
         resp = auth_client.get("/", follow_redirects=False)
         assert resp.status_code == 303
         assert resp.headers["location"] == "/guide"
+
+
+class TestAbout:
+    """Tests for the project information page."""
+
+    def test_about_page_renders_project_metadata(self, auth_client):
+        resp = auth_client.get("/about")
+
+        assert resp.status_code == 200
+        assert "TolochaTV" in resp.text
+        assert "0.1.0" in resp.text
+        assert "Python" in resp.text
+        assert "FastAPI" in resp.text
+        assert "https://github.com/izquierdojl/tolochatv" in resp.text
+        assert "Información del proyecto" in resp.text
+        assert "Versión" in resp.text
+
+    def test_about_navigation_link_follows_settings_and_uses_local_icon(self, auth_client):
+        resp = auth_client.get("/about")
+
+        settings_position = resp.text.index('href="/settings"')
+        about_position = resp.text.index('href="/about"')
+        assert about_position > settings_position
+        assert 'src="/static/icons/info.svg?v=2026-08-22-1"' in resp.text
+        assert 'aria-label="Información"' in resp.text
+
+    def test_about_icon_is_served_locally(self, auth_client):
+        resp = auth_client.get("/static/icons/info.svg")
+
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("image/svg+xml")
+        assert 'fill="#fff"' in resp.text
 
 
 class TestFavicon:

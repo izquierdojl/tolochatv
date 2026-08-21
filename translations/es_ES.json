@@ -285,5 +285,12 @@
   "max_streams_per_source must be a JSON object": "max_streams_per_source debe ser un objeto JSON",
   "min/ep": "min/ep",
   "sel": "sel.",
-  "unavailable_groups must be a JSON array": "unavailable_groups debe ser una matriz JSON"
+  "unavailable_groups must be a JSON array": "unavailable_groups debe ser una matriz JSON",
+  "About": "Información",
+  "Open repository": "Abrir repositorio",
+  "Project information": "Información del proyecto",
+  "Repository": "Repositorio",
+  "Tools": "Herramientas",
+  "TolochaTV is a self-hosted IPTV player with live TV, EPG, VOD, series, and transcoding support.": "TolochaTV es un reproductor IPTV autoalojado con televisión en directo, EPG, VOD, series y compatibilidad con transcodificación.",
+  "Version": "Versión"
 }
