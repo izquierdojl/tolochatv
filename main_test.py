@@ -90,6 +90,9 @@ class TestSetup:
         resp = client.get("/setup", follow_redirects=False)
         assert resp.status_code == 200
         assert b"setup" in resp.content.lower() or b"Crear" in resp.content
+        assert b"tolocha-auth" in resp.content
+        assert b"tolocha-auth-card" in resp.content
+        assert b"/static/css/tolocha-theme.css?v=" in resp.content
 
     def test_setup_redirects_when_users_exist(self, client, tmp_path):
         import auth
@@ -153,6 +156,9 @@ class TestLogin:
 
         resp = client.get("/login")
         assert resp.status_code == 200
+        assert b"tolocha-auth" in resp.content
+        assert b"tolocha-brand" in resp.content
+        assert b"/static/css/tolocha-theme.css?v=" in resp.content
 
     def test_login_success_sets_cookie(self, client, tmp_path):
         import auth
@@ -506,6 +512,21 @@ class TestChannelsTree:
         assert (
             f'/static/js/app.js?v={main.ASSET_VERSION}'.encode() in resp.content
         )
+
+    def test_guide_static_css_asset_and_theme_are_versioned(self, auth_client):
+        import main
+
+        with patch("main.epg.has_programs", return_value=True):
+            resp = auth_client.get("/guide")
+        assert resp.status_code == 200
+        assert f'/static/css/tolocha-theme.css?v={main.ASSET_VERSION}'.encode() in resp.content
+        assert b"tolocha-shell" in resp.content
+        assert b"tolocha-rail" in resp.content
+
+        css_resp = auth_client.get(f"/static/css/tolocha-theme.css?v={main.ASSET_VERSION}")
+        assert css_resp.status_code == 200
+        assert "--tc-bg" in css_resp.text
+        assert "prefers-reduced-motion" in css_resp.text
 
     def test_channels_i18n_keys_served(self, auth_client):
         resp = auth_client.get("/api/i18n.js")

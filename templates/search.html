@@ -2,13 +2,13 @@
 {% block title %}{{ _('Search') }} - TolochaTV{% endblock %}
 
 {% block content %}
-<div class="flex flex-col h-full min-h-0 min-w-0">
+<div class="tolocha-page flex flex-col h-full min-h-0 min-w-0">
   <h2 class="text-xl sm:text-3xl font-bold mb-6">{{ _('Search') }}</h2>
 
   <form action="/search" method="GET" class="mb-8">
     <div class="flex flex-wrap items-center gap-2 sm:gap-4 max-w-xl mb-3">
       <input type="text" name="q" value="{{ query }}" placeholder="{{ _('Search...') }}"
-             class="flex-1 min-w-0 px-3 sm:px-6 py-2 sm:py-4 bg-gray-800 rounded-lg text-base sm:text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              class="tolocha-control flex-1 min-w-0 px-3 sm:px-6 py-2 sm:py-4 rounded-lg text-base sm:text-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
              autofocus>
       <label class="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
         <input type="checkbox" name="regex" value="true" {% if regex %}checked{% endif %}
@@ -34,7 +34,7 @@
       </label>
       <label class="flex items-center gap-2 text-gray-400">
         <span>{{ _('Limit:') }}</span>
-        <select name="limit" class="bg-gray-700 border-gray-600 rounded px-2 py-1 text-sm" onchange="this.form.submit()">
+         <select name="limit" class="tolocha-control rounded px-2 py-1 text-sm" onchange="this.form.submit()">
           <option value="25" {% if limit == 25 %}selected{% endif %}>25</option>
           <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
           <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
@@ -61,7 +61,7 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {% for stream in results.live %}
       <a href="/play/live/{{ stream.stream_id }}"
-         class="block bg-gray-800 rounded-lg p-4 hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all flex flex-col items-center"
+          class="tolocha-card block rounded-lg p-4 hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all flex flex-col items-center"
          tabindex="0" data-nav="grid">
         {% if stream.stream_icon %}
         <img data-src="{{ stream.stream_icon | logo_url }}" alt="" class="w-16 h-16 object-contain mb-2 lazy-img"
@@ -83,9 +83,9 @@
       <div class="movie-card relative group" data-movie-id="{{ movie.stream_id }}" data-movie-name="{{ movie.name }}"
            data-movie-cover="{{ (movie.stream_icon or '') | logo_url }}" data-movie-ext="{{ movie.container_extension or 'mkv' }}">
         <a href="/movie/{{ movie.stream_id }}"
-           class="block bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
+            class="tolocha-card block rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
            tabindex="0" data-nav="grid">
-          <div class="aspect-[2/3] bg-gray-700">
+           <div class="tolocha-surface aspect-[2/3]">
             {% if movie.stream_icon %}
             <img data-src="{{ movie.stream_icon | logo_url }}" alt="" class="w-full h-full object-cover lazy-img"
                  onerror="this.style.display='none'">
@@ -113,9 +113,9 @@
       {% for s in results.series %}
       <div class="series-card relative group" data-series-id="{{ s.series_id }}" data-series-name="{{ s.name }}" data-series-cover="{{ (s.cover or '') | logo_url }}">
         <a href="/series/{{ s.series_id }}"
-           class="block bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
+            class="tolocha-card block rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
            tabindex="0" data-nav="grid">
-          <div class="aspect-[2/3] bg-gray-700">
+           <div class="tolocha-surface aspect-[2/3]">
             {% if s.cover %}
             <img data-src="{{ s.cover | logo_url }}" alt="" class="w-full h-full object-cover lazy-img"
                  onerror="this.style.display='none'">

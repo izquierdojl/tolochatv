@@ -13,19 +13,19 @@
   <p class="text-xl text-gray-400">{{ _('Loading series...') }}</p>
 </div>
 {% else %}
-<div class="flex flex-col h-full min-h-0 min-w-0">
+<div class="tolocha-page flex flex-col h-full min-h-0 min-w-0">
   <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
     <h2 class="text-xl sm:text-3xl font-bold">{{ _('Series') }}</h2>
     <div class="flex gap-2">
-      <a href="/search?series=true" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 focusable" tabindex="0">
+       <a href="/search?series=true" class="tolocha-control px-4 py-2 rounded focusable" tabindex="0">
         {{ _('Search') }}
       </a>
       {% if current_sort %}
-      <a href="/series" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 focusable" tabindex="0">
+       <a href="/series" class="tolocha-control px-4 py-2 rounded focusable" tabindex="0">
         {{ _('Favorites') }}
       </a>
       {% else %}
-      <a href="/series?sort=rating" class="px-4 py-2 rounded bg-gray-700 hover:bg-gray-600 focusable" tabindex="0">
+       <a href="/series?sort=rating" class="tolocha-control px-4 py-2 rounded focusable" tabindex="0">
         {{ _('Browse All') }}
       </a>
       {% endif %}
@@ -36,7 +36,7 @@
   <!-- Browse view -->
   <div class="flex-1 min-h-0 overflow-auto scroll-ring-safe">
     <div class="mb-4 flex gap-2">
-      <select id="category-select" class="bg-gray-700 text-white px-4 py-2 rounded">
+       <select id="category-select" class="tolocha-control px-4 py-2 rounded">
         <option value="">{{ _('All Categories') }}</option>
         {% for cat in categories %}
         <option value="{{ cat.category_id }}" {% if current_category|string == cat.category_id|string %}selected{% endif %}>
@@ -44,7 +44,7 @@
         </option>
         {% endfor %}
       </select>
-      <select id="sort-select" class="bg-gray-700 text-white px-4 py-2 rounded">
+       <select id="sort-select" class="tolocha-control px-4 py-2 rounded">
         <option value="alpha" {% if current_sort == 'alpha' %}selected{% endif %}>A-Z</option>
         <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>{{ _('Rating') }}</option>
         <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>{{ _('Newest') }}</option>
@@ -54,9 +54,9 @@
       {% for s in series %}
       <div class="series-card relative group" data-series-id="{{ s.series_id }}" data-series-name="{{ s.name }}" data-series-cover="{{ (s.cover or '') | logo_url }}">
         <a href="/series/{{ s.series_id }}"
-           class="block bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
+            class="tolocha-card block rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 focus:ring-2 focus:ring-blue-500 focusable transition-all"
            tabindex="0" data-nav="grid" title="{{ s.name }}{% if s.rating %}&#10;★ {{ s.rating }}{% endif %}">
-          <div class="aspect-[2/3] bg-gray-700">
+           <div class="tolocha-surface aspect-[2/3]">
             {% if s.cover %}
             <img src="{{ s.cover | logo_url }}" alt="" class="w-full h-full object-cover" loading="lazy"
                  onerror="this.style.display='none'">

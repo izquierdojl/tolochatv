@@ -41,7 +41,7 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.settings-item:hover { background: #374151; }
+.settings-item:hover { background: var(--tc-surface-soft); }
 .settings-check { width: 1rem; text-align: center; }
 /* Icon buttons */
 .ctrl-btn {
@@ -50,7 +50,7 @@
   color: white;
   background: transparent;
 }
-.ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+.ctrl-btn:hover { background: rgb(111 129 80 / 0.45); }
 .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .ctrl-btn svg { width: 1.25rem; height: 1.25rem; fill: white; }
 #toggle-cc svg, #info-btn svg, #autonext-btn svg { opacity: 0.25; }
@@ -65,7 +65,7 @@
 
 {% block content %}
   <!-- Video container with overlay controls - full frame -->
-  <div class="h-full bg-black overflow-hidden relative" id="player-container">
+  <div class="tolocha-player h-full bg-black overflow-hidden relative" id="player-container">
     <video id="video" class="w-full h-full bg-black" crossorigin="anonymous"></video>
 
     <!-- Title overlay -->
@@ -76,14 +76,14 @@
 
     <!-- Loading indicator -->
     <div id="loading" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
-      <div class="animate-spin w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+       <div class="tolocha-spinner animate-spin w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"></div>
     </div>
 
     <!-- Error state -->
     <div id="error" class="absolute inset-0 flex items-center justify-center bg-black/80 hidden z-30">
       <div class="text-center">
         <p class="text-2xl text-red-400 mb-4">{{ _('Failed to load stream') }}</p>
-        <button onclick="location.reload()" class="px-6 py-3 bg-blue-600 rounded-lg focusable" tabindex="0">{{ _('Retry') }}</button>
+        <button onclick="location.reload()" class="tolocha-primary px-6 py-3 rounded-lg focusable" tabindex="0">{{ _('Retry') }}</button>
       </div>
     </div>
 
