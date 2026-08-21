@@ -35,12 +35,17 @@ context: |
 
 rules:
   proposal:
-    - Mention which top-level modules (main.py, cache.py, epg.py, auth.py, ...) the change affects
+    - Mention which top-level modules (main.py, cache.py, epg.py, auth.py, ...)
+      the change affects
     - Note how tests are affected (which *_test.py files)
   specs:
     - Use Given/When/Then format for scenarios
   design:
-    - Reference concrete module/function names from the codebase, not hypothetical structure
+    - Reference concrete module/function names from the codebase, not
+      hypothetical structure
   tasks:
-    - Include a step to run `uv run ruff check .`, `uv run basedpyright`, and `uv run pytest`
+    - Include a step to run `uv run ruff check .`, `uv run basedpyright`, and
+      `uv run pytest`
     - Break tasks into chunks of max 2 hours
+githubCopilot:
+  cloudAgent: true
